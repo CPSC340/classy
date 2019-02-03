@@ -37,6 +37,14 @@ export class ScheduleController {
         this.taskList = {};
     }
 
+    // public async scheduleTask(scheduledTime: Date, scheduledFunction: (params: any) => any, params: any): Promise<boolean> {
+    //     Log.info(`ScheduleController::scheduleTask( ${scheduledTime.toISOString()}, ${scheduledFunction.name},\
+    //      ${params.toString()}) - start`);
+    //
+    //     Log.info(`ScheduleController::scheduleTask(..) - task scheduled`);
+    //     return false;
+    // }
+
     public async scheduleAssignmentCreation(scheduledTime: Date, assignId: string): Promise<boolean> {
         const taskName: string = TaskPrefix.Create + assignId;
         Log.info("ScheduleController::scheduleAssignmentCreation( " +
@@ -108,8 +116,4 @@ export class ScheduleController {
         Log.info("ScheduleController::scheduleAssignmentClose(..) - task scheduled");
         return true;
     }
-
-
-
-
 }

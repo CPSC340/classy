@@ -20,7 +20,9 @@
         "node": ">= 8.9 < 9"
     },
     "workspaces": [
-        "packages/*", "packages/portal/frontend", "packages/portal/backend"
+        "packages/*",
+        "packages/portal/frontend",
+        "packages/portal/backend"
     ],
     "devDependencies": {
         "@types/chai": "4.0.8",
@@ -46,6 +48,7 @@
     "dependencies": {
         "@types/mongodb": "^3.0.5",
         "@types/node-schedule": "^1.2.2",
+        "dockerode": "^2.5.8",
         "dotenv": "4.0.0",
         "fs-extra": "5.0.0",
         "jszip": "3.1.5",
