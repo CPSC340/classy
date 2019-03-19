@@ -253,7 +253,6 @@ export class AdminProvisionPage extends AdminPage {
         //     Log.error('AdminProvisioningPage::handleReleasePressed(..) - ERROR: ' + json.failure);
         // }
         // return true;
-
         Log.info('AdminProvisionPage::handleReleasePressed(..) - start');
 
         const releaseList = document.getElementById("repositoryReleaseSelect") as HTMLSelectElement;
@@ -300,6 +299,7 @@ export class AdminProvisionPage extends AdminPage {
     }
 
     private async handleProvisionPressed(): Promise<boolean> {
+        const startingTime = Date.now();
         Log.info('AdminProvisionPage::handleProvisionPressed(..) - start');
 
         const provisionList = document.getElementById("repositoryProvisionSelect") as HTMLSelectElement;
@@ -343,6 +343,7 @@ export class AdminProvisionPage extends AdminPage {
             UI.showSuccessToast('Repository provisioning complete.', {timeout: 20000, buttonLabel: 'Ok'});
         }
         // refresh the page
+        Log.info(`TOOK: ${Util.took(startingTime)}`);
         await this.init({});
         return true;
     }
