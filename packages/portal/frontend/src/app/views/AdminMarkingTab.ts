@@ -1,4 +1,4 @@
-import Log from "../../../../../../common/Log";
+import Log from "../../../../../common/Log";
 
 import {
     DeliverableTransport,
@@ -6,17 +6,17 @@ import {
     GradeTransportPayload,
     StudentTransport,
     TeamTransport
-} from "../../../../../../common/types/PortalTypes";
-import {SortableTable, TableCell, TableHeader} from "../../util/SortableTable";
+} from "../../../../../common/types/PortalTypes";
+import {SortableTable, TableCell, TableHeader} from "../util/SortableTable";
 
 import {OnsSelectElement} from "onsenui";
-import {AssignmentGrade, AssignmentRubric} from "../../../../../../common/types/CS340Types";
-import {UI} from "../../util/UI";
-import {AdminDeliverablesTab} from "../AdminDeliverablesTab";
-import {AdminGradesTab} from "../AdminGradesTab";
-import {AdminPage} from "../AdminPage";
-import {AdminStudentsTab} from "../AdminStudentsTab";
-import {AdminTeamsTab} from "../AdminTeamsTab";
+import {AssignmentGrade, AssignmentRubric} from "../../../../../common/types/CS340Types";
+import {UI} from "../util/UI";
+import {AdminDeliverablesTab} from "./AdminDeliverablesTab";
+import {AdminGradesTab} from "./AdminGradesTab";
+import {AdminPage} from "./AdminPage";
+import {AdminStudentsTab} from "./AdminStudentsTab";
+import {AdminTeamsTab} from "./AdminTeamsTab";
 
 export class AdminMarkingTab extends AdminPage {
 
@@ -44,6 +44,13 @@ export class AdminMarkingTab extends AdminPage {
         UI.hideModal();
 
         this.populateDeliverableDropdown(delivs);
+
+        if (this.selectedDeliverable !== null) {
+            Log.info(`AdminMarkingTab::init(..) - Re-rendering student submissions`); // TODO: Make this more efficient
+            await this.renderStudentSubmissions(this.selectedDeliverable);
+        } else {
+            Log.info(`AdminMarkingTab::init(..) - Selected Deliverable is null; not re-rendering - value: ${this.selectedDeliverable}`);
+        }
     }
 
     private populateDeliverableDropdown(delivs: DeliverableTransport[]): void {
@@ -142,6 +149,15 @@ export class AdminMarkingTab extends AdminPage {
         }
 
         tableHeaders.push({
+            id: "section",
+            text: "Lab Section",
+            sortable: true,
+            defaultSort: false,
+            sortDown: false,
+            style: `padding-left: 1em; padding-right: 1em`
+        });
+
+        tableHeaders.push({
             id:          "grade",
             text:        "Grade",
             sortable:    true,
@@ -170,8 +186,14 @@ export class AdminMarkingTab extends AdminPage {
 
             // ASSUMPTION: If students are on a team for a deliverable, they should all have the same grade
             const studentId: string = team.people[0];
+            const studentTransport = studentIdMap.get(studentId);
+            if (studentTransport === null) {
+                Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Unable to find student object`);
+                newRow.push({value: `N/A`, html: `N/A`});
+            } else {
+                newRow.push({value: `${studentTransport.labId}`, html: `${studentTransport.labId}`});
+            }
             let newEntry: TableCell;
-            // let completelyGraded: boolean = false;
 
             if (gradeMap.has(studentId)) {
                 newEntry = this.buildGradeCell(studentId, gradeMap.get(studentId), deliverableTransport);

@@ -1,19 +1,19 @@
 import {OnsInputElement, OnsSearchInputElement} from "onsenui";
-import Log from "../../../../../../common/Log";
+import Log from "../../../../../common/Log";
 import {
     AssignmentGrade,
     AssignmentRubric,
     QuestionGrade, SubQuestionGrade,
     SubQuestionRubric
-} from "../../../../../../common/types/CS340Types";
-import {DeliverableTransport, RepositoryTransport, TeamTransport} from "../../../../../../common/types/PortalTypes";
-import {Factory} from "../../Factory";
-import {UI} from "../../util/UI";
-import {AdminDeliverablesTab} from "../AdminDeliverablesTab";
-import {AdminPage} from "../AdminPage";
-import {AdminResultsTab} from "../AdminResultsTab";
-import {AdminView} from "../AdminView";
+} from "../../../../../common/types/CS340Types";
+import {DeliverableTransport, RepositoryTransport, TeamTransport} from "../../../../../common/types/PortalTypes";
+import {Factory} from "../Factory";
+import {UI} from "../util/UI";
+import {AdminDeliverablesTab} from "./AdminDeliverablesTab";
 import {AdminMarkingTab} from "./AdminMarkingTab";
+import {AdminPage} from "./AdminPage";
+import {AdminResultsTab} from "./AdminResultsTab";
+import {AdminView} from "./AdminView";
 
 const ERROR_POTENTIAL_INCORRECT_INPUT: string = "input triggered warning";
 const ERROR_INVALID_INPUT: string = "invalid input";
@@ -24,7 +24,17 @@ const WARN_EMPTY_FIELD: string = "empty field";
 
 export class GradingPageView extends AdminPage {
 
-    private UBC_LETTER_GRADES: Map<string, {lower: number, upper: number}> = new Map<string, {lower: number, upper: number}>();
+    public static UBC_LETTER_GRADES: Map<string, {lower: number, upper: number}> = new Map<string, {lower: number, upper: number}>([
+        ["A+", {lower: 90  , upper: 100}],
+        ["A",  {lower: 85  , upper: 89}],
+        ["A-", {lower: 80  , upper: 84}],
+        ["B+", {lower: 76  , upper: 79}],
+        ["B",  {lower: 72  , upper: 75}],
+        ["B-", {lower: 68  , upper: 71}],
+        ["C+", {lower: 64  , upper: 67}],
+        ["C",  {lower: 60  , upper: 63}],
+        ["F",  {lower: 0   , upper: 59}],
+    ]);
     // private students: string[];
     // private isTeam: boolean;
     // private deliverableId: string;
@@ -41,15 +51,15 @@ export class GradingPageView extends AdminPage {
     }
 
     public async init(opts: any): Promise<void> {
-        this.UBC_LETTER_GRADES.set("A+",    {lower: 90  , upper: 100});
-        this.UBC_LETTER_GRADES.set("A",     {lower: 85  , upper: 89});
-        this.UBC_LETTER_GRADES.set("A-",    {lower: 80  , upper: 84});
-        this.UBC_LETTER_GRADES.set("B+",    {lower: 76  , upper: 79});
-        this.UBC_LETTER_GRADES.set("B",     {lower: 72  , upper: 75});
-        this.UBC_LETTER_GRADES.set("B-",    {lower: 68  , upper: 71});
-        this.UBC_LETTER_GRADES.set("C+",    {lower: 64  , upper: 67});
-        this.UBC_LETTER_GRADES.set("C",     {lower: 60  , upper: 63});
-        this.UBC_LETTER_GRADES.set("F",     {lower: 0   , upper: 59});
+        // GradingPageView.UBC_LETTER_GRADES.set("A+",    {lower: 90  , upper: 100});
+        // GradingPageView.UBC_LETTER_GRADES.set("A",     {lower: 85  , upper: 89});
+        // GradingPageView.UBC_LETTER_GRADES.set("A-",    {lower: 80  , upper: 84});
+        // GradingPageView.UBC_LETTER_GRADES.set("B+",    {lower: 76  , upper: 79});
+        // GradingPageView.UBC_LETTER_GRADES.set("B",     {lower: 72  , upper: 75});
+        // GradingPageView.UBC_LETTER_GRADES.set("B-",    {lower: 68  , upper: 71});
+        // GradingPageView.UBC_LETTER_GRADES.set("C+",    {lower: 64  , upper: 67});
+        // GradingPageView.UBC_LETTER_GRADES.set("C",     {lower: 60  , upper: 63});
+        // GradingPageView.UBC_LETTER_GRADES.set("F",     {lower: 0   , upper: 59});
         Log.info(`GradingPage::init(..) - opts: ${JSON.stringify(opts)}`);
         this.studentId = opts.sid;
         this.assignmentId = opts.aid;
@@ -195,7 +205,7 @@ export class GradingPageView extends AdminPage {
                 if (previousSubmission === null || !previousSubmission.questions[i].subQuestions[j].graded) {
                     gradeInputElement.setAttribute("placeHolder", subQuestion.name);
                 } else {
-                    const letterGrade: string = this.getLetterGrade(
+                    const letterGrade: string = GradingPageView.getLetterGrade(
                         previousSubmission.questions[i].subQuestions[j].grade,
                         subQuestion.outOf);
                     gradeInputElement.setAttribute("placeHolder", letterGrade);
@@ -406,7 +416,8 @@ export class GradingPageView extends AdminPage {
                     errorComment = ERROR_INVALID_INPUT;
                     errorStatus = true;
                 } else {
-                    if (!this.UBC_LETTER_GRADES.has(gradeInputElement.value)) {
+                    const gradeLetter: string = gradeInputElement.value.toUpperCase();
+                    if (!GradingPageView.UBC_LETTER_GRADES.has(gradeLetter)) {
                         gradeValue = 0;
                         if (!warnStatus) {
                             warnComment = WARN_EMPTY_FIELD;
@@ -415,7 +426,7 @@ export class GradingPageView extends AdminPage {
                         graded = false;
                         errorElement.innerHTML = "Warning: Input field is empty";
                     } else {
-                        const gradeRange = this.UBC_LETTER_GRADES.get(gradeInputElement.value);
+                        const gradeRange = GradingPageView.UBC_LETTER_GRADES.get(gradeLetter);
                         const multiplier = Math.ceil((gradeRange.upper + gradeRange.lower) / 2) / 100;
                         const outOf = parseFloat(gradeInputElement.getAttribute("data-outOf"));
                         gradeValue = multiplier * outOf;
@@ -620,15 +631,24 @@ export class GradingPageView extends AdminPage {
     /**
      *
      */
-    private getLetterGrade(grade: number, outOf: number): string {
+    public static getLetterGrade(grade: number, outOf: number): string {
         const gradePercent = (grade / outOf) * 100;
-        for (const key of this.UBC_LETTER_GRADES.keys()) {
-            const range = this.UBC_LETTER_GRADES.get(key);
+        for (const key of GradingPageView.UBC_LETTER_GRADES.keys()) {
+            const range = GradingPageView.UBC_LETTER_GRADES.get(key);
             if (range.lower <= gradePercent && gradePercent <= range.upper) {
                 return key;
             }
         }
 
         return "";
+    }
+
+    public static getLetterGradeMidpoint(letterGrade: string): number {
+        const gradeRange = GradingPageView.UBC_LETTER_GRADES.get(letterGrade);
+        if (gradeRange === null) {
+            return 0;
+        }
+
+        return (gradeRange.upper + gradeRange.lower) / 2;
     }
 }
