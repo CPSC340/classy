@@ -100,6 +100,14 @@ export class RubricController {
                                 Log.info("RubricController::updateRubric(..) - cleaned header: " +
                                     cleanedHeader);
 
+                                // Check if the header contains the words "bonus" or "optional"
+                                // if they do, do not add these weights to the grade total
+                                const bonusHeaderExpr = /(bonus|optional)/ig;
+                                let bonusQuestion = false;
+                                if (cleanedHeader.match(bonusHeaderExpr)) {
+                                    bonusQuestion = true;
+                                }
+
                                 // clean the data
                                 // get only the inside of the rubric
                                 const rubricArray: string[] = rubricString.match(/{.*}/);
@@ -133,12 +141,20 @@ export class RubricController {
                                             value = rawValue;
                                         }
 
+                                        // setup possible modifiers for this question
+                                        const modifiers = [];
+
+                                        // if the question is bonus; indicate it
+                                        if (bonusQuestion === true) {
+                                            modifiers.push("bonus");
+                                        }
+
                                         const newSubQuestionRubric: SubQuestionRubric = {
                                             name:           key,
                                             description:    "",
                                             outOf:          value,
                                             weight:         1,
-                                            modifiers:      []
+                                            modifiers:      modifiers
                                         };
 
                                         subQuestionArray.push(newSubQuestionRubric);

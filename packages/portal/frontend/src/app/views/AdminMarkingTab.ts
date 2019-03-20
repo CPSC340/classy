@@ -293,7 +293,10 @@ export class AdminMarkingTab extends AdminPage {
         let sum: number = 0;
         for (const question of ((deliverable.rubric) as AssignmentRubric).questions) {
             for (const subQuestion of question.subQuestions) {
-                sum += subQuestion.outOf * subQuestion.weight;
+                Log.info(`AdminMarkingTab::calculateMaxGrade(..) - subQuestion: ${subQuestion.name}'s modifiers: ${subQuestion.modifiers}`);
+                if (subQuestion.modifiers === null || !subQuestion.modifiers.includes("bonus")) {
+                    sum += subQuestion.outOf * subQuestion.weight;
+                }
             }
         }
 
