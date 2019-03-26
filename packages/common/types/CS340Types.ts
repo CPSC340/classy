@@ -45,6 +45,7 @@ export interface SubQuestionGrade {
     grade: number;
     graded: boolean;
     feedback: string;
+    modifiers: string[];
 }
 
 // Placed in Deliverable.custom
