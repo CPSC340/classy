@@ -205,13 +205,18 @@ export class GradingPageView extends AdminPage {
                 if (previousSubmission === null || !previousSubmission.questions[i].subQuestions[j].graded) {
                     gradeInputElement.setAttribute("placeHolder", subQuestion.name);
                 } else {
-                    const letterGrade: string = GradingPageView.getLetterGrade(
-                        previousSubmission.questions[i].subQuestions[j].grade,
-                        subQuestion.outOf);
-                    gradeInputElement.setAttribute("placeHolder", letterGrade);
-                    (gradeInputElement as OnsInputElement).value = letterGrade;
+                    const lastGrade = previousSubmission.questions[i].subQuestions[j].grade;
+                    if (lastGrade === 0) {
+                        (gradeInputElement as OnsInputElement).value = lastGrade;
+                    } else {
+                        const letterGrade: string = GradingPageView.getLetterGrade(
+                            lastGrade,
+                            subQuestion.outOf);
+                        gradeInputElement.setAttribute("placeHolder", letterGrade);
+                        (gradeInputElement as OnsInputElement).value = letterGrade;
+                    }
                 }
-                gradeInputElement.setAttribute("data-type", subQuestion.name);
+                // gradeInputElement.setAttribute("data-type", subQuestion.name);
                 gradeInputElement.setAttribute("modifier", "underbar");
                 gradeInputElement.setAttribute("class", "subQuestionGradeInput");
                 // gradeInputElement.setAttribute("onchange", "window.myApp.view.checkIfWarning(this)");
@@ -219,8 +224,9 @@ export class GradingPageView extends AdminPage {
                     this.checkIfWarning((element.target as HTMLInputElement).parentElement as OnsInputElement);
                 };
                 // gradeInputElement.setAttribute("onchange", "window.myApp.view.checkIfWarning(this)");
-                gradeInputElement.setAttribute("data-outOf", "" + subQuestion.outOf);
+                // gradeInputElement.setAttribute("data-outOf", "" + subQuestion.outOf);
                 gradeInputElement.innerHTML = subQuestion.name + " [out of " + subQuestion.outOf + "]";
+                gradeInputElement.setAttribute("data-rubric", JSON.stringify(subQuestion));
 
                 // Add grade input to infoBox
                 subInfoBoxElement.appendChild(gradeInputElement);
@@ -395,7 +401,16 @@ export class GradingPageView extends AdminPage {
                 const errorElement = errorElements[0] as HTMLElement;
 
                 // Get the type from the embedded HTML data
-                let rubricType = gradeInputElement.getAttribute("data-type");
+                let rubricType: string = null;
+                let subQuestionRubric: SubQuestionRubric;
+                try {
+                    subQuestionRubric = JSON.parse(gradeInputElement.getAttribute("data-rubric"));
+                } catch (err) {
+                    Log.error(`GradingPage::submitGrade - Error when retrieving subQuestionRubric Object: ${err}`);
+                    continue;
+                }
+
+                rubricType = subQuestionRubric.name;
 
                 // Retrieve the value inputted into the form field
                 let gradeValue: number = 0;
@@ -411,6 +426,8 @@ export class GradingPageView extends AdminPage {
                     continue;
                 }
 
+                let modifiers: string[] = [];
+
                 // if the value causes a warning (invalid input)
                 if (this.checkIfWarning(gradeInputElement)) {
                     errorComment = ERROR_INVALID_INPUT;
@@ -418,17 +435,22 @@ export class GradingPageView extends AdminPage {
                 } else {
                     const gradeLetter: string = gradeInputElement.value.toUpperCase();
                     if (!GradingPageView.UBC_LETTER_GRADES.has(gradeLetter)) {
-                        gradeValue = 0;
-                        if (!warnStatus) {
-                            warnComment = WARN_EMPTY_FIELD;
+                        if (gradeLetter === "0") {
+                            gradeValue = 0;
+                            modifiers.push("numerical");
+                        } else {
+                            gradeValue = 0;
+                            if (!warnStatus) {
+                                warnComment = WARN_EMPTY_FIELD;
+                            }
+                            warnStatus = true;
+                            graded = false;
+                            errorElement.innerHTML = "Warning: Input field is empty";
                         }
-                        warnStatus = true;
-                        graded = false;
-                        errorElement.innerHTML = "Warning: Input field is empty";
                     } else {
                         const gradeRange = GradingPageView.UBC_LETTER_GRADES.get(gradeLetter);
                         const multiplier = Math.ceil((gradeRange.upper + gradeRange.lower) / 2) / 100;
-                        const outOf = parseFloat(gradeInputElement.getAttribute("data-outOf"));
+                        const outOf = subQuestionRubric.outOf;
                         gradeValue = multiplier * outOf;
                     }
                 }
@@ -458,7 +480,8 @@ export class GradingPageView extends AdminPage {
                     name: rubricType,
                     grade:       completed ? gradeValue : 0,
                     graded:      completed ? graded : true,
-                    feedback:    responseBoxElement.value
+                    feedback:    responseBoxElement.value,
+                    modifiers:   modifiers,
                 };
 
                 subQuestionArray.push(newSubGrade);
@@ -596,12 +619,28 @@ export class GradingPageView extends AdminPage {
         //     errorBox[0].innerHTML = "";
         //     return false;
         // }
+        let subQuestionRubric: SubQuestionRubric;
+        try {
+            subQuestionRubric = JSON.parse(gradeInputElement.getAttribute("data-rubric"));
+        } catch (err) {
+            Log.error(`GradingPage::checkIfWarning(..) - ERROR trying to find subQuestionRubric: ${err}`);
+            return true;
+        }
 
+        const letterGradeRegExp = new RegExp('^[ABCabc][\-\+]?$|^F$|^0$|^$');
+        const numericalGradeRegExp = new RegExp('^\d+(\.\d+)?$|^$');
         const value = gradeInputElement.value;
         const parentElement: HTMLElement = gradeInputElement.parentElement;
         const errorBox = parentElement.getElementsByClassName("errorBox");
 
-        if (value.match(new RegExp('^[ABCabc][\-\+]?$|^F$|^$'))) {
+        let match = false;
+        if (subQuestionRubric.modifiers.includes("raw")) {
+            match = numericalGradeRegExp.test(value);
+        } else {
+            match = letterGradeRegExp.test(value);
+        }
+
+        if (match) {
             errorBox[0].innerHTML = "";
             return false;
         } else {
