@@ -53,6 +53,7 @@ export default class CS340Routes implements IREST {
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
         if (!isValid.isAdmin) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -81,7 +82,8 @@ export default class CS340Routes implements IREST {
         const token = req.headers.token;
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
-        if (!isValid.isAdmin) {
+        if (isValid.isAdmin === false && isValid.isStaff === false) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -112,6 +114,7 @@ export default class CS340Routes implements IREST {
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
         if (!isValid.isAdmin) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -140,7 +143,8 @@ export default class CS340Routes implements IREST {
         const token = req.headers.token;
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
-        if (!isValid.isAdmin) {
+        if (isValid.isAdmin === false && isValid.isStaff === false) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -234,7 +238,8 @@ export default class CS340Routes implements IREST {
         const token = req.headers.token;
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
-        if (!isValid.isAdmin) {
+        if (isValid.isStaff === false && isValid.isAdmin === false) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -273,6 +278,7 @@ export default class CS340Routes implements IREST {
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
         if (!isValid.isStaff) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -309,6 +315,7 @@ export default class CS340Routes implements IREST {
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
         if (!isValid.isAdmin) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -335,6 +342,7 @@ export default class CS340Routes implements IREST {
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
         if (!isValid.isAdmin) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -362,6 +370,7 @@ export default class CS340Routes implements IREST {
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
         if (!isValid.isAdmin) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -397,6 +406,7 @@ export default class CS340Routes implements IREST {
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
         if (!isValid.isAdmin) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });
@@ -454,14 +464,34 @@ export default class CS340Routes implements IREST {
     public static async toggleFinalGradeRelease(req: any, res: any, next: any) {
         Log.info(`CS340Routes::isFinalGradeReleased(..) - start`);
 
-        const ac: AssignmentController = new AssignmentController();
+        const user = req.headers.user;
+        const token = req.headers.token;
 
-        const result = await ac.toggleFinalGradeStatus();
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+        let result = false;
+        if (!isValid.isAdmin) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
+            res.send(401, {
+                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
+            });
+        } else {
+            const asc: AssignmentController = new AssignmentController();
 
-        res.send(200, {success: result});
+            result = await asc.toggleFinalGradeStatus();
+            res.send(200, {success: result});
+        }
+
         return next();
     }
 
+    /**
+     * A custom provision handler to integrate into the provisioning page. Transparently acts like the standard
+     * provision repo API, but does some Assignment handling, if needed.
+     * @param req
+     * @param res
+     * @param next
+     */
     private static async provisionOverride(req: any, res: any, next: any) {
         Log.info(`CS340Routes::provisionOverride(..) - start`);
 
@@ -470,7 +500,8 @@ export default class CS340Routes implements IREST {
 
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
-        if (!isValid.isStaff) {
+        if (isValid.isStaff === false && isValid.isAdmin === false) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
             res.send(401, {
                 error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
             });

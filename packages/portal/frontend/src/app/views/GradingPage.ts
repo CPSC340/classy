@@ -426,7 +426,7 @@ export class GradingPageView extends AdminPage {
                     continue;
                 }
 
-                let modifiers: string[] = [];
+                const modifiers: string[] = [];
 
                 // if the value causes a warning (invalid input)
                 if (this.checkIfWarning(gradeInputElement)) {

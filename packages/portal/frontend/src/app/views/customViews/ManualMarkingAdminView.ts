@@ -602,12 +602,13 @@ export class ManualMarkingAdminView extends AdminView {
         const url = this.remote + `/portal/cs340/closeAssignmentRepositories/` + deliverableSelectElement.value;
         const response = await fetch(url, options);
         const responseJson = await response.json();
-        Log.info(`${this.loggingName}::closeRepositories() - response: ${responseJson}`);
+        Log.info(`${this.loggingName}::closeRepositories() - response: ${JSON.stringify(responseJson)}`);
 
         if (responseJson.response === true) {
             UI.notificationToast(`Closed all ${deliverableSelectElement.value} repositories`);
         } else {
-            UI.notificationToast(`Unable to close ${deliverableSelectElement.value} repositories; error: ${responseJson.error}`);
+            UI.notificationToast(`Unable to close ${deliverableSelectElement.value} repositories; error: ` +
+                `${JSON.stringify(responseJson.error)}`);
         }
 
         return;
