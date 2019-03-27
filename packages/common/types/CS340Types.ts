@@ -28,6 +28,7 @@ export interface AssignmentGrade {
     // assignmentID: string;               // Unique Assignment ID per course
     // studentID: string;                  // Unique Student ID per course
     // released: boolean;                  // status if assignment grade has been released or not
+    feedback: string;                   // Feedback for the assignment
     fullyGraded: boolean;
     questions: QuestionGrade[];         // SubQuestions
 }

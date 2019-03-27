@@ -266,8 +266,37 @@ export class GradingPageView extends AdminPage {
             gradingSectionElement!.appendChild(questionBox);
         }
 
+
+        // Contains the feedback box for the general feedback form
+        const generalFeedbackBoxElement = document.createElement("div");
+        generalFeedbackBoxElement.setAttribute("class", "subQuestionTextBox");
+
+        // create general feedback form
+        const generalFeedbackElement = document.createElement("textArea");
+        const generalFeedbackLabelElement = document.createElement("p");
+        generalFeedbackLabelElement.innerHTML = "General Comments & Feedback";
+        generalFeedbackLabelElement.setAttribute("class", "textboxLabel");
+        generalFeedbackElement.setAttribute("class", "textarea");
+        generalFeedbackElement.setAttribute("id", "grading-general-feedback");
+        generalFeedbackElement.setAttribute("style",
+            "width: 100%;height: 75%; min-width: 100px;" +
+            "min-height: 50px; margin-bottom: 20px");
+
+        // if there was a previous grading with feedback, keep it!
+        if (previousSubmission !== null &&
+            typeof previousSubmission.feedback !== "undefined" &&
+            previousSubmission.feedback !== null) {
+            generalFeedbackElement.innerHTML = previousSubmission.feedback;
+        }
+
+        generalFeedbackBoxElement.appendChild(generalFeedbackLabelElement);
+        generalFeedbackBoxElement.appendChild(generalFeedbackElement);
+
+        gradingSectionElement!.appendChild(generalFeedbackBoxElement);
+
         // Create a Save Grade button
         const submitButton = document.createElement("ons-button");
+        submitButton.setAttribute("style", "margin-left: 10px; margin-right: 10px");
         // submitButton.setAttribute("onclick", "window.myApp.view.submitGrade()");
         submitButton.onclick = async (evt) => {
             await this.submitReturn(this.studentId, this.assignmentId);
@@ -296,6 +325,8 @@ export class GradingPageView extends AdminPage {
                 nextButton.onclick = async (evt) => {
                     await this.submitNext(this.studentId, this.assignmentId, nextId);
                 };
+                nextButton.setAttribute("style", "margin-left: 10px; margin-right: 10px");
+
                 nextButton.innerHTML = "Next submission";
                 gradingSectionElement!.appendChild(nextButton);
             } else {
@@ -548,10 +579,18 @@ export class GradingPageView extends AdminPage {
             targetStudentIds.push(sid);
         }
 
-        return await this.submitGradeRecord(aid, targetStudentIds, questionArray);
+        let generalFeedback: string = "";
+        const generalFeedbackElement: HTMLTextAreaElement = document.getElementById("grading-general-feedback") as HTMLTextAreaElement;
+        if (generalFeedbackElement !== null) {
+            generalFeedback = generalFeedbackElement.value;
+        }
+
+        return await this.submitGradeRecord(aid, targetStudentIds, questionArray, generalFeedback);
     }
 
-    public async submitGradeRecord(aid: string, personIds: string[], questionArray: QuestionGrade[]): Promise<boolean> {
+    public async submitGradeRecord(aid: string, personIds: string[],
+                                   questionArray: QuestionGrade[],
+                                   assignmentFeedback: string): Promise<boolean> {
         Log.info("CS340AdminView::submitGradeRecord(..) - start");
         const allPromises: Array<Promise<any>> = [];
         UI.showModal("Submitting grade(s), please wait...");
@@ -559,8 +598,9 @@ export class GradingPageView extends AdminPage {
         for (const personId of personIds) {
             // create a new grade
             const newAssignmentGrade: AssignmentGrade = {
-                fullyGraded:  false,
-                questions:    questionArray
+                fullyGraded:    false,
+                questions:      questionArray,
+                feedback:       assignmentFeedback,
             };
 
             const verifiedAssignmentGrade: AssignmentGrade = this.verifyMarkedAssignmentGrade(newAssignmentGrade);
