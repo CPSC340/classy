@@ -25,15 +25,17 @@ const WARN_EMPTY_FIELD: string = "empty field";
 export class GradingPageView extends AdminPage {
 
     public static UBC_LETTER_GRADES: Map<string, {lower: number, upper: number}> = new Map<string, {lower: number, upper: number}>([
-        ["A+", {lower: 90  , upper: 100}],
-        ["A",  {lower: 85  , upper: 89}],
-        ["A-", {lower: 80  , upper: 84}],
-        ["B+", {lower: 76  , upper: 79}],
-        ["B",  {lower: 72  , upper: 75}],
-        ["B-", {lower: 68  , upper: 71}],
-        ["C+", {lower: 64  , upper: 67}],
-        ["C",  {lower: 60  , upper: 63}],
-        ["F",  {lower: 0   , upper: 59}],
+        ["A+", {lower: 90, upper: 100}],
+        ["A" , {lower: 85, upper: 89}] ,
+        ["A-", {lower: 80, upper: 84}] ,
+        ["B+", {lower: 76, upper: 79}] ,
+        ["B" , {lower: 72, upper: 75}] ,
+        ["B-", {lower: 68, upper: 71}] ,
+        ["C+", {lower: 64, upper: 67}] ,
+        ["C" , {lower: 60, upper: 63}] ,
+        ["C-", {lower: 55, upper: 59}] ,
+        ["D" , {lower: 50, upper: 54}] ,
+        ["F" , {lower: 0 , upper: 49}] ,
     ]);
     // private students: string[];
     // private isTeam: boolean;
@@ -627,7 +629,7 @@ export class GradingPageView extends AdminPage {
             return true;
         }
 
-        const letterGradeRegExp = new RegExp('^[ABCabc][\-\+]?$|^F$|^0$|^$');
+        const letterGradeRegExp = new RegExp('^[ABC][\-\+]?$|^D$|^F$|^0$|^$', 'i');
         const numericalGradeRegExp = new RegExp('^\d+(\.\d+)?$|^$');
         const value = gradeInputElement.value;
         const parentElement: HTMLElement = gradeInputElement.parentElement;
