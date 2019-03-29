@@ -149,6 +149,10 @@ export class RubricController {
                                             modifiers.push("bonus");
                                         }
 
+                                        if (/raw.*/g.test(key)) {
+                                            modifiers.push("numerical");
+                                        }
+
                                         const newSubQuestionRubric: SubQuestionRubric = {
                                             name:           key,
                                             description:    "",

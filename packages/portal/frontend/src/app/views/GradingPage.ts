@@ -210,6 +210,8 @@ export class GradingPageView extends AdminPage {
                     const lastGrade = previousSubmission.questions[i].subQuestions[j].grade;
                     if (lastGrade === 0) {
                         (gradeInputElement as OnsInputElement).value = lastGrade.toString();
+                    } else if (previousSubmission.questions[i].subQuestions[j].modifiers.includes("numerical")) {
+                        (gradeInputElement as OnsInputElement).value = lastGrade.toString();
                     } else {
                         const letterGrade: string = GradingPageView.getLetterGrade(
                             lastGrade,
@@ -265,7 +267,6 @@ export class GradingPageView extends AdminPage {
             // Add the questionBox to the gradingSection
             gradingSectionElement!.appendChild(questionBox);
         }
-
 
         // Contains the feedback box for the general feedback form
         const generalFeedbackBoxElement = document.createElement("div");
@@ -466,10 +467,13 @@ export class GradingPageView extends AdminPage {
                     errorComment = ERROR_INVALID_INPUT;
                     errorStatus = true;
                 } else {
-                    const gradeLetter: string = gradeInputElement.value.toUpperCase();
-                    if (!GradingPageView.UBC_LETTER_GRADES.has(gradeLetter)) {
-                        if (gradeLetter === "0") {
+                    const enteredGrade: string = gradeInputElement.value.toUpperCase();
+                    if (!GradingPageView.UBC_LETTER_GRADES.has(enteredGrade)) {
+                        if (enteredGrade === "0") {
                             gradeValue = 0;
+                            modifiers.push("numerical");
+                        } else if (subQuestionRubric.modifiers.includes("numerical")) {
+                            gradeValue = parseFloat(enteredGrade);
                             modifiers.push("numerical");
                         } else {
                             gradeValue = 0;
@@ -481,7 +485,7 @@ export class GradingPageView extends AdminPage {
                             errorElement.innerHTML = "Warning: Input field is empty";
                         }
                     } else {
-                        const gradeRange = GradingPageView.UBC_LETTER_GRADES.get(gradeLetter);
+                        const gradeRange = GradingPageView.UBC_LETTER_GRADES.get(enteredGrade);
                         const multiplier = Math.ceil((gradeRange.upper + gradeRange.lower) / 2) / 100;
                         const outOf = subQuestionRubric.outOf;
                         gradeValue = multiplier * outOf;
@@ -669,14 +673,14 @@ export class GradingPageView extends AdminPage {
             return true;
         }
 
-        const letterGradeRegExp = new RegExp('^[ABC][\-\+]?$|^D$|^F$|^0$|^$', 'i');
-        const numericalGradeRegExp = new RegExp('^\d+(\.\d+)?$|^$');
+        const letterGradeRegExp = new RegExp(/^[ABC][\-\+]?$|^D$|^F$|^0$|^$/, 'i');
+        const numericalGradeRegExp = new RegExp(/^\d+(\.\d+)?$|^$/);
         const value = gradeInputElement.value;
         const parentElement: HTMLElement = gradeInputElement.parentElement;
         const errorBox = parentElement.getElementsByClassName("errorBox");
 
         let match = false;
-        if (subQuestionRubric.modifiers.includes("raw")) {
+        if (subQuestionRubric.modifiers.includes("numerical")) {
             match = numericalGradeRegExp.test(value);
         } else {
             match = letterGradeRegExp.test(value);
