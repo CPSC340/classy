@@ -307,15 +307,48 @@ export class GradingPageView extends AdminPage {
         gradingSectionElement!.appendChild(submitButton);
 
         // check if it is possible to create a next button
-        const lastArray = AdminMarkingTab.lastGradingArray;
+        const nextUngraded = await this.getNextUngraded(this.assignmentId, this.studentId);
 
-        if (lastArray.length !== 0) {
-            // begin searching for this current team
+        if (nextUngraded !== "") {
+            Log.info(`GradingPage::populateGradingPage(..) - Creating ungraded button:`);
+            const nextButton = document.createElement("ons-button");
+            nextButton.onclick = async (evt) => {
+                await this.submitNext(this.studentId, this.assignmentId, nextUngraded);
+            };
+            nextButton.setAttribute("style", "margin-left: 10px; margin-right: 10px");
+
+            nextButton.innerHTML = "Next Ungraded";
+            gradingSectionElement!.appendChild(nextButton);
+        } else {
+            Log.info(`GradingPage::populateGradingPage(..) - Did not find next person, skipping button creation:`);
+        }
+
+        // check if it is possible to create a next button for next ungraded lab
+        const nextUngradedSameLab = await this.getNextUngradedSameLab(this.assignmentId, this.studentId);
+
+        if (nextUngradedSameLab !== "") {
+            Log.info(`GradingPage::populateGradingPage(..) - Creating ungraded, same lab button:`);
+            const nextButton = document.createElement("ons-button");
+            nextButton.onclick = async (evt) => {
+                await this.submitNext(this.studentId, this.assignmentId, nextUngradedSameLab);
+            };
+            nextButton.setAttribute("style", "margin-left: 10px; margin-right: 10px");
+
+            nextButton.innerHTML = "Next Ungraded (in same Lab)";
+            gradingSectionElement!.appendChild(nextButton);
+        } else {
+            Log.info(`GradingPage::populateGradingPage(..) - Did not find next person, skipping button creation:`);
+        }
+
+/*        const studentInfoArray = AdminMarkingTab.lastStudentInfo;
+        if (studentInfoArray.length !== 0) {
+            let labSection = "";
             let nextId = "";
-            for (let i = 0; i < lastArray.length - 1; i++) {
-                if (lastArray[i].people[0] === this.studentId) {
-                    Log.info(`GradingPage::populateGradingPage(..) - Found Student ID and next student: ${lastArray[i + 1]}`);
-                    nextId = lastArray[i + 1].people[0];
+            for (let i = 0; i < studentInfoArray.length - 1; i++) {
+                if (studentInfoArray[i].studentId === this.studentId) {
+                    Log.info(`GradingPage::populateGradingPage(..) - Found Student ID and next student: ${ungradedStudentInfoArray[i + 1]}`);
+                    nextId = studentInfoArray[i + 1].studentId;
+                    labSection = studentInfoArray[i].labId;
                     break;
                 }
             }
@@ -328,17 +361,99 @@ export class GradingPageView extends AdminPage {
                 };
                 nextButton.setAttribute("style", "margin-left: 10px; margin-right: 10px");
 
-                nextButton.innerHTML = "Next submission";
+                nextButton.innerHTML = "Next Ungraded";
                 gradingSectionElement!.appendChild(nextButton);
             } else {
                 Log.info(`GradingPage::populateGradingPage(..) - Did not find next person, skipping button creation:`);
             }
-        } else {
-            //
-            Log.info(`GradingPage::populateGradingPage(..) - unable to find next studentId due to missing lastGradingArray`);
-        }
+
+            // find all ungraded and in the same lab section
+            const ungradedStudentInfoArray = studentInfoArray.filter((studentInfo) => {
+                if (studentInfo.labId !== labSection) {
+                    return false;
+                }
+
+                if (studentInfo.grade === null) {
+                    return true;
+                }
+                if (typeof studentInfo.grade.custom.assignmentGrade === "undefined") {
+                    Log.warn(`GradingPage::filteringGraded - Found unformatted grade ` +
+                        `for student; ${studentInfo.studentId}; grade: ${studentInfo.grade}`);
+                    return false;
+                }
+
+                return !((studentInfo.grade.custom.assignmentGrade) as AssignmentGrade).fullyGraded;
+            });
+
+        }*/
+
+        // check if it is possible to create a next button
+        const lastArray = AdminMarkingTab.lastGradingArray;
+
+        // if (lastArray.length !== 0) {
+        //     // begin searching for this current team
+        //     let nextId = "";
+        //     for (let i = 0; i < lastArray.length - 1; i++) {
+        //         if (lastArray[i].people[0] === this.studentId) {
+        //             Log.info(`GradingPage::populateGradingPage(..) - Found Student ID and next student: ${lastArray[i + 1]}`);
+        //             nextId = lastArray[i + 1].people[0];
+        //             break;
+        //         }
+        //     }
+        //
+        //     if (nextId !== "") {
+        //         Log.info(`GradingPage::populateGradingPage(..) - Creating button:`);
+        //         const nextButton = document.createElement("ons-button");
+        //         nextButton.onclick = async (evt) => {
+        //             await this.submitNext(this.studentId, this.assignmentId, nextId);
+        //         };
+        //         nextButton.setAttribute("style", "margin-left: 10px; margin-right: 10px");
+        //
+        //         nextButton.innerHTML = "Next Ungraded";
+        //         gradingSectionElement!.appendChild(nextButton);
+        //     } else {
+        //         Log.info(`GradingPage::populateGradingPage(..) - Did not find next person, skipping button creation:`);
+        //     }
+        // } else {
+        //     //
+        //     Log.info(`GradingPage::populateGradingPage(..) - unable to find next studentId due to missing lastGradingArray`);
+        // }
 
         return null;
+    }
+
+    private async getNextUngraded(deliverableId: string, studentId: string): Promise<string> {
+        Log.info(`GradingPage::getNextUngraded(${deliverableId}, ${studentId}) - start`);
+        // get class options
+        const options: any = AdminView.getOptions();
+
+        const url = `${this.remote}/portal/cs340/getNextUngraded/${deliverableId}/${studentId}`;
+        const response = await fetch(url, options);
+
+        if (response.status === 200) {
+            const responseJSON = await response.json();
+            return responseJSON.response;
+        } else {
+            Log.warn(`GradingPage::getNextUngraded(..) - Unable to find next student; Status code: ${response.status}`);
+            return "";
+        }
+    }
+
+    private async getNextUngradedSameLab(deliverableId: string, studentId: string): Promise<string> {
+        Log.info(`GradingPage::getNextUngradedSameLab(${deliverableId}, ${studentId}) - start`);
+        // get class options
+        const options: any = AdminView.getOptions();
+
+        const url = `${this.remote}/portal/cs340/getNextUngradedSameLab/${deliverableId}/${studentId}`;
+        const response = await fetch(url, options);
+
+        if (response.status === 200) {
+            const responseJSON = await response.json();
+            return responseJSON.response;
+        } else {
+            Log.warn(`GradingPage::getNextUngradedSameLab(..) - Unable to find next student in same lab; Status code: ${response.status}`);
+            return "";
+        }
     }
 
     /**
@@ -472,8 +587,19 @@ export class GradingPageView extends AdminPage {
                         if (enteredGrade === "0") {
                             gradeValue = 0;
                             modifiers.push("numerical");
+                        } else if (enteredGrade === "") {
+                            gradeValue = 0;
+                            if (!warnStatus) {
+                                warnComment = WARN_EMPTY_FIELD;
+                            }
+                            warnStatus = true;
+                            graded = false;
+                            errorElement.innerHTML = "Warning: Input field is empty";
                         } else if (subQuestionRubric.modifiers.includes("numerical")) {
                             gradeValue = parseFloat(enteredGrade);
+                            if (isNaN(gradeValue)) {
+                                gradeValue = 0;
+                            }
                             modifiers.push("numerical");
                         } else {
                             gradeValue = 0;

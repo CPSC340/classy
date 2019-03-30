@@ -41,8 +41,203 @@ export default class CS340Routes implements IREST {
 
         server.post("/portal/cs340/provision/:delivId/:repoId", CS340Routes.provisionOverride);
 
+        server.get("/portal/cs340/getNextUngradedSameLab/:delivId/:sid", CS340Routes.getNextUngradedSameLab);
+        server.get("/portal/cs340/getNextUngraded/:delivId/:sid", CS340Routes.getNextUngraded);
+
         server.get("/portal/cs340/isFinalGradeReleased", CS340Routes.isFinalGradeReleased);
         server.post("/portal/cs340/toggleFinalGradeRelease", CS340Routes.toggleFinalGradeRelease);
+    }
+    public static async getNextUngraded(req: any, res: any, next: any) {
+        Log.info(`CS340Routes::getNextUngraded(..) - start`);
+
+        const user = req.headers.user;
+        const token = req.headers.token;
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+        if (!isValid.isAdmin && !isValid.isStaff) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
+            res.send(401, {
+                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
+            });
+        } else {
+            const delivId = req.params.delivId;
+            const sid = req.params.sid;
+
+            const db: DatabaseController = DatabaseController.getInstance();
+            const gradePromise = db.getGrades();
+            const teamsPromise = db.getTeams();
+            const personsPromise = db.getPeople();
+
+            const [grades, teams, persons] = await Promise.all([gradePromise, teamsPromise, personsPromise]);
+
+            // build a id:grade map
+            const gradeMap: Map<string, Grade> = new Map<string, Grade>();
+            (grades as Grade[]).filter((grade) => {
+                return grade.delivId === delivId;
+            }).forEach((grade) => {
+                gradeMap.set(grade.personId, grade);
+            });
+
+            // build a id:persons map
+            const personMap: Map<string, Person> = new Map<string, Person>();
+            (persons as Person[]).forEach((person) => {
+                personMap.set(person.id, person);
+            });
+
+            // if (!personMap.has(sid)) {
+            //     res.send(404, {error: `Invalid student ID specified, could not find student!`});
+            //     return next();
+            // }
+
+            // const labId = personMap.get(sid).labId;
+
+            // filter teams to just this deliverable, and no grades
+            const filteredTeams = (teams as Team[]).filter((team) => {
+                return team.delivId === delivId;
+            }).filter((team) => {
+                const personId = team.personIds[0];
+                const person = personMap.get(personId);
+
+                // if (person.labId !== labId) {
+                //     return false;
+                // }
+
+                if (!gradeMap.has(personId)) {
+                    return true;
+                }
+
+                const grade = gradeMap.get(personId);
+                if (typeof grade.custom.assignmentGrade === "undefined") {
+                    Log.error(`CS340Routes::getNextUngradedSameLab(..) - Error: Invalid Grade found: ${grade}`);
+                    return false;
+                }
+
+                return !grade.custom.assignmentGrade.fullyGraded;
+            }).sort((item1, item2) => {
+                if (item1.personIds[0] > item2.personIds[0]) {
+                    return 1;
+                } else if (item1.personIds[0] < item2.personIds[0]) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            });
+
+            let cleanedTeams: Team | undefined = filteredTeams.find((team) => {
+               return !team.personIds.includes(sid);
+            });
+
+            if (typeof cleanedTeams === "undefined" || cleanedTeams === null) {
+                res.send(404, {error: `Unable to find an ungraded team`});
+            } else {
+                res.send(200, {response: cleanedTeams.personIds[0]});
+            }
+
+            // Log.info(`CS340Routes::getNextUngraded(..) - Found ${cleanedTeams.length} teams that need grading`);
+            // if (cleanedTeams.length > 0) {
+            //     res.send(200, {response: filteredTeams[0].personIds[0]});
+            // } else {
+            //     res.send(404, {error: `Unable to find an ungraded team`});
+            // }
+        }
+
+        return next();
+    }
+
+    public static async getNextUngradedSameLab(req: any, res: any, next: any) {
+        Log.info(`CS340Routes::getNextUngradedSameLab(..) - start`);
+
+        const user = req.headers.user;
+        const token = req.headers.token;
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+        if (!isValid.isAdmin && !isValid.isStaff) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
+            res.send(401, {
+                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
+            });
+        } else {
+            const delivId = req.params.delivId;
+            const sid = req.params.sid;
+
+            const db: DatabaseController = DatabaseController.getInstance();
+            const gradePromise = db.getGrades();
+            const teamsPromise = db.getTeams();
+            const personsPromise = db.getPeople();
+
+            const [grades, teams, persons] = await Promise.all([gradePromise, teamsPromise, personsPromise]);
+
+            // build a id:grade map
+            const gradeMap: Map<string, Grade> = new Map<string, Grade>();
+            (grades as Grade[]).filter((grade) => {
+                return grade.delivId === delivId;
+            }).forEach((grade) => {
+                gradeMap.set(grade.personId, grade);
+            });
+
+            // build a id:persons map
+            const personMap: Map<string, Person> = new Map<string, Person>();
+            (persons as Person[]).forEach((person) => {
+                personMap.set(person.id, person);
+            });
+
+            if (!personMap.has(sid)) {
+                res.send(404, {error: `Invalid student ID specified, could not find student!`});
+                return next();
+            }
+
+            const labId = personMap.get(sid).labId;
+
+            // filter teams to just this deliverable, and no grades
+            const filteredTeams = (teams as Team[]).filter((team) => {
+                return team.delivId === delivId;
+            }).filter((team) => {
+                const personId = team.personIds[0];
+                const person = personMap.get(personId);
+
+                if (person.labId !== labId) {
+                    return false;
+                }
+
+                if (!gradeMap.has(personId)) {
+                    return true;
+                }
+
+                const grade = gradeMap.get(personId);
+                if (typeof grade.custom.assignmentGrade === "undefined") {
+                    Log.error(`CS340Routes::getNextUngradedSameLab(..) - Error: Invalid Grade found: ${grade}`);
+                    return false;
+                }
+
+                return !grade.custom.assignmentGrade.fullyGraded;
+            }).sort((item1, item2) => {
+                if (item1.personIds[0] > item2.personIds[0]) {
+                    return 1;
+                } else if (item1.personIds[0] < item2.personIds[0]) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            });
+
+            // Log.info(`CS340Routes::getNextUngradedSameLab(..) - Found ${filteredTeams.length} teams that need grading`);
+            // if (filteredTeams.length > 0) {
+            //     res.send(200, {response: filteredTeams[0].personIds[0]});
+            // } else {
+            //     res.send(404, {error: `Unable to find an ungraded team`});
+            // }
+          let cleanedTeams: Team | undefined = filteredTeams.find((team) => {
+                return !team.personIds.includes(sid);
+            });
+
+            if (typeof cleanedTeams === "undefined" || cleanedTeams === null) {
+                res.send(404, {error: `Unable to find an ungraded team`});
+            } else {
+                res.send(200, {response: cleanedTeams.personIds[0]});
+            }
+        }
+
+        return next();
     }
 
     public static async createAllRepositories(req: any, res: any, next: any) {
