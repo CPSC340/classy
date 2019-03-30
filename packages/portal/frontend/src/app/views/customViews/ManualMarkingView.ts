@@ -257,7 +257,13 @@ export class ManualMarkingView extends StudentView {
                 // }
 
                 st.generate();
-
+                const feedbackDiv = document.getElementById("studentGradeFeedback");
+                if (typeof assignmentGrade.feedback === "undefined" || assignmentGrade.feedback.trim() === "") {
+                    UI.hideSection(`studentGradeFeedbackBox`);
+                } else {
+                    feedbackDiv.innerHTML = assignmentGrade.feedback;
+                    UI.showSection(`studentGradeFeedbackBox`);
+                }
                 UI.showSection(`studentGradesDiv`);
                 UI.hideSection(`studentNoGradesDiv`);
             }
