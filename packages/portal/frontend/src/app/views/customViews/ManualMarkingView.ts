@@ -124,6 +124,7 @@ export class ManualMarkingView extends StudentView {
                 feedbackDiv.innerHTML = ` ${grade.comment}`;
                 UI.showSection(`studentGradesDiv`);
                 UI.hideSection(`studentNoGradesDiv`);
+                UI.showSection(`studentGradeFeedbackBox`);
             } else {
                 const rubric: AssignmentRubric = deliv.rubric as AssignmentRubric;
                 const assignmentGrade: AssignmentGrade = customGrade.assignmentGrade;
