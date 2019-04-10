@@ -123,7 +123,7 @@ export default class CS340Routes implements IREST {
                 }
             });
 
-            let cleanedTeams: Team | undefined = filteredTeams.find((team) => {
+            const cleanedTeams: Team | undefined = filteredTeams.find((team) => {
                return !team.personIds.includes(sid);
             });
 
@@ -226,7 +226,7 @@ export default class CS340Routes implements IREST {
             // } else {
             //     res.send(404, {error: `Unable to find an ungraded team`});
             // }
-          let cleanedTeams: Team | undefined = filteredTeams.find((team) => {
+            const cleanedTeams: Team | undefined = filteredTeams.find((team) => {
                 return !team.personIds.includes(sid);
             });
 
