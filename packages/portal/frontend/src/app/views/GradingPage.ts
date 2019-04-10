@@ -340,53 +340,6 @@ export class GradingPageView extends AdminPage {
             Log.info(`GradingPage::populateGradingPage(..) - Did not find next person, skipping button creation:`);
         }
 
-/*        const studentInfoArray = AdminMarkingTab.lastStudentInfo;
-        if (studentInfoArray.length !== 0) {
-            let labSection = "";
-            let nextId = "";
-            for (let i = 0; i < studentInfoArray.length - 1; i++) {
-                if (studentInfoArray[i].studentId === this.studentId) {
-                    Log.info(`GradingPage::populateGradingPage(..) - Found Student ID and next student: ${ungradedStudentInfoArray[i + 1]}`);
-                    nextId = studentInfoArray[i + 1].studentId;
-                    labSection = studentInfoArray[i].labId;
-                    break;
-                }
-            }
-
-            if (nextId !== "") {
-                Log.info(`GradingPage::populateGradingPage(..) - Creating button:`);
-                const nextButton = document.createElement("ons-button");
-                nextButton.onclick = async (evt) => {
-                    await this.submitNext(this.studentId, this.assignmentId, nextId);
-                };
-                nextButton.setAttribute("style", "margin-left: 10px; margin-right: 10px");
-
-                nextButton.innerHTML = "Next Ungraded";
-                gradingSectionElement!.appendChild(nextButton);
-            } else {
-                Log.info(`GradingPage::populateGradingPage(..) - Did not find next person, skipping button creation:`);
-            }
-
-            // find all ungraded and in the same lab section
-            const ungradedStudentInfoArray = studentInfoArray.filter((studentInfo) => {
-                if (studentInfo.labId !== labSection) {
-                    return false;
-                }
-
-                if (studentInfo.grade === null) {
-                    return true;
-                }
-                if (typeof studentInfo.grade.custom.assignmentGrade === "undefined") {
-                    Log.warn(`GradingPage::filteringGraded - Found unformatted grade ` +
-                        `for student; ${studentInfo.studentId}; grade: ${studentInfo.grade}`);
-                    return false;
-                }
-
-                return !((studentInfo.grade.custom.assignmentGrade) as AssignmentGrade).fullyGraded;
-            });
-
-        }*/
-
         // check if it is possible to create a next button
         const lastArray = AdminMarkingTab.lastGradingArray;
 
@@ -843,6 +796,9 @@ export class GradingPageView extends AdminPage {
      *
      */
     public static getLetterGrade(grade: number, outOf: number): string {
+        if (grade === 0) {
+            return "0";
+        }
         const gradePercent = (grade / outOf) * 100;
         for (const key of GradingPageView.UBC_LETTER_GRADES.keys()) {
             const range = GradingPageView.UBC_LETTER_GRADES.get(key);
@@ -855,6 +811,9 @@ export class GradingPageView extends AdminPage {
     }
 
     public static getLetterGradeMidpoint(letterGrade: string): number {
+        if (letterGrade === "0") {
+            return 0;
+        }
         const gradeRange = GradingPageView.UBC_LETTER_GRADES.get(letterGrade);
         if (gradeRange === null) {
             return 0;

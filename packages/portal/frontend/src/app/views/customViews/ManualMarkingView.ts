@@ -112,13 +112,18 @@ export class ManualMarkingView extends StudentView {
 
         if (this.delivGradeMap.has(delivId)) {
             const grade: GradeTransport = this.delivGradeMap.get(delivId);
+            Log.info(`${this.loggingName}::handleGradeChange(..) - found grade: ${JSON.stringify(grade)}`);
             const deliv: DeliverableTransport = this.delivMap.get(delivId);
             const customGrade = grade.custom;
             const studentGradeTable = document.getElementById(`studentGradeBreakdownTable`);
+            const feedbackDiv = document.getElementById("studentGradeFeedback");
             if (typeof customGrade.assignmentGrade === `undefined` || typeof deliv.rubric === `undefined` ||
                 typeof (deliv.rubric as AssignmentRubric).questions === `undefined`) {
                 // display normal grade
-                studentGradeTable.innerHTML = `Grade: ${grade.score}`;
+                studentGradeTable.innerHTML = `<b>Grade:</b> ${grade.score}`;
+                feedbackDiv.innerHTML = ` ${grade.comment}`;
+                UI.showSection(`studentGradesDiv`);
+                UI.hideSection(`studentNoGradesDiv`);
             } else {
                 const rubric: AssignmentRubric = deliv.rubric as AssignmentRubric;
                 const assignmentGrade: AssignmentGrade = customGrade.assignmentGrade;
@@ -257,7 +262,6 @@ export class ManualMarkingView extends StudentView {
                 // }
 
                 st.generate();
-                const feedbackDiv = document.getElementById("studentGradeFeedback");
                 if (typeof assignmentGrade.feedback === "undefined" || assignmentGrade.feedback.trim() === "") {
                     UI.hideSection(`studentGradeFeedbackBox`);
                 } else {
@@ -269,6 +273,7 @@ export class ManualMarkingView extends StudentView {
             }
 
         } else {
+            Log.info(`${this.loggingName}::handleGradeChange(..) - did not find grade for student`);
             UI.hideSection(`studentGradesDiv`);
             UI.showSection(`studentNoGradesDiv`);
         }
