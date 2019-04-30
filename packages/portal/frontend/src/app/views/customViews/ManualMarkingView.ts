@@ -215,7 +215,9 @@ export class ManualMarkingView extends StudentView {
                             newRow.push({value: subQuestion.feedback, html: subQuestion.feedback});
 
                             totalGrade += subQuestion.grade * subRubric.weight;
-                            maxGrade += subRubric.outOf;
+                            if (!subRubric.modifiers.includes("bonus")) {
+                                maxGrade += subRubric.outOf;
+                            }
 
                             st.addRow(newRow);
                         }
