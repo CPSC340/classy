@@ -23,6 +23,7 @@ const ERROR_MALFORMED_PAGE: string = "malformed page with info elements";
 const WARN_EMPTY_FIELD: string = "empty field";
 
 export class GradingPageView extends AdminPage {
+    public static LETTER_GRADES_ENABLED: boolean = false;
 
     public static UBC_LETTER_GRADES: Map<string, {lower: number, upper: number}> = new Map<string, {lower: number, upper: number}>([
         ["A+", {lower: 90, upper: 100}],
@@ -203,21 +204,28 @@ export class GradingPageView extends AdminPage {
 
                 // Create the grade input element
                 const gradeInputElement = document.createElement("ons-input");
-                // gradeInputElement.setAttribute("type", "number");
                 if (previousSubmission === null || !previousSubmission.questions[i].subQuestions[j].graded) {
                     gradeInputElement.setAttribute("placeHolder", subQuestion.name);
                 } else {
                     const lastGrade = previousSubmission.questions[i].subQuestions[j].grade;
-                    if (lastGrade === 0) {
-                        (gradeInputElement as OnsInputElement).value = lastGrade.toString();
-                    } else if (previousSubmission.questions[i].subQuestions[j].modifiers.includes("numerical")) {
-                        (gradeInputElement as OnsInputElement).value = lastGrade.toString();
+
+                    if (GradingPageView.LETTER_GRADES_ENABLED) {
+                        if (lastGrade === 0) {
+                            (gradeInputElement as OnsInputElement).value = lastGrade.toString();
+                        } else if (previousSubmission.questions[i].subQuestions[j].modifiers.includes("numerical")) {
+                            (gradeInputElement as OnsInputElement).value = lastGrade.toString();
+                        } else {
+                            const letterGrade: string = GradingPageView.getLetterGrade(
+                                lastGrade,
+                                subQuestion.outOf);
+                            gradeInputElement.setAttribute("placeHolder", letterGrade);
+                            (gradeInputElement as OnsInputElement).value = letterGrade;
+                        }
                     } else {
-                        const letterGrade: string = GradingPageView.getLetterGrade(
-                            lastGrade,
-                            subQuestion.outOf);
-                        gradeInputElement.setAttribute("placeHolder", letterGrade);
-                        (gradeInputElement as OnsInputElement).value = letterGrade;
+                        // letter grades are not enabled (only numerical)
+                        gradeInputElement.setAttribute("type", "number");
+                        gradeInputElement.setAttribute("placeHolder", lastGrade.toString());
+                        (gradeInputElement as OnsInputElement).value = lastGrade.toString();
                     }
                 }
                 // gradeInputElement.setAttribute("data-type", subQuestion.name);
@@ -536,39 +544,84 @@ export class GradingPageView extends AdminPage {
                     errorStatus = true;
                 } else {
                     const enteredGrade: string = gradeInputElement.value.toUpperCase();
-                    if (!GradingPageView.UBC_LETTER_GRADES.has(enteredGrade)) {
-                        if (enteredGrade === "0") {
-                            gradeValue = 0;
-                            modifiers.push("numerical");
-                        } else if (enteredGrade === "") {
-                            gradeValue = 0;
-                            if (!warnStatus) {
-                                warnComment = WARN_EMPTY_FIELD;
-                            }
-                            warnStatus = true;
-                            graded = false;
-                            errorElement.innerHTML = "Warning: Input field is empty";
-                        } else if (subQuestionRubric.modifiers.includes("numerical")) {
-                            gradeValue = parseFloat(enteredGrade);
-                            if (isNaN(gradeValue)) {
-                                gradeValue = 0;
-                            }
-                            modifiers.push("numerical");
-                        } else {
-                            gradeValue = 0;
-                            if (!warnStatus) {
-                                warnComment = WARN_EMPTY_FIELD;
-                            }
-                            warnStatus = true;
-                            graded = false;
-                            errorElement.innerHTML = "Warning: Input field is empty";
-                        }
-                    } else {
+
+                    if (GradingPageView.LETTER_GRADES_ENABLED && GradingPageView.UBC_LETTER_GRADES.has(enteredGrade)) {
                         const gradeRange = GradingPageView.UBC_LETTER_GRADES.get(enteredGrade);
                         const multiplier = Math.ceil((gradeRange.upper + gradeRange.lower) / 2) / 100;
                         const outOf = subQuestionRubric.outOf;
                         gradeValue = multiplier * outOf;
+                    } else {
+                        if (!GradingPageView.UBC_LETTER_GRADES.has(enteredGrade)) {
+                            if (enteredGrade === "0") {
+                                gradeValue = 0;
+                                modifiers.push("numerical");
+                            } else if (enteredGrade === "") {
+                                gradeValue = 0;
+                                if (!warnStatus) {
+                                    warnComment = WARN_EMPTY_FIELD;
+                                }
+                                warnStatus = true;
+                                graded = false;
+                                errorElement.innerHTML = "Warning: Input field is empty";
+                            } else if (subQuestionRubric.modifiers.includes("numerical")) {
+                                gradeValue = parseFloat(enteredGrade);
+                                if (isNaN(gradeValue)) {
+                                    gradeValue = 0;
+                                }
+                                modifiers.push("numerical");
+                            } else {
+                                gradeValue = 0;
+                                if (!warnStatus) {
+                                    warnComment = WARN_EMPTY_FIELD;
+                                }
+                                warnStatus = true;
+                                graded = false;
+                                errorElement.innerHTML = "Warning: Input field is empty";
+                            }
+                        }
                     }
+
+                    //
+                    // if (LETTER_GRADES_ENABLED) {
+                    //     if (!GradingPageView.UBC_LETTER_GRADES.has(enteredGrade)) {
+                    //         if (enteredGrade === "0") {
+                    //             gradeValue = 0;
+                    //             modifiers.push("numerical");
+                    //         } else if (enteredGrade === "") {
+                    //             gradeValue = 0;
+                    //             if (!warnStatus) {
+                    //                 warnComment = WARN_EMPTY_FIELD;
+                    //             }
+                    //             warnStatus = true;
+                    //             graded = false;
+                    //             errorElement.innerHTML = "Warning: Input field is empty";
+                    //         } else if (subQuestionRubric.modifiers.includes("numerical")) {
+                    //             gradeValue = parseFloat(enteredGrade);
+                    //             if (isNaN(gradeValue)) {
+                    //                 gradeValue = 0;
+                    //             }
+                    //             modifiers.push("numerical");
+                    //         } else {
+                    //             gradeValue = 0;
+                    //             if (!warnStatus) {
+                    //                 warnComment = WARN_EMPTY_FIELD;
+                    //             }
+                    //             warnStatus = true;
+                    //             graded = false;
+                    //             errorElement.innerHTML = "Warning: Input field is empty";
+                    //         }
+                    //     } else {
+                    //         const gradeRange = GradingPageView.UBC_LETTER_GRADES.get(enteredGrade);
+                    //         const multiplier = Math.ceil((gradeRange.upper + gradeRange.lower) / 2) / 100;
+                    //         const outOf = subQuestionRubric.outOf;
+                    //         gradeValue = multiplier * outOf;
+                    //     }
+                    // } else {
+                    //     if (enteredGrade === "") {
+                    //         gradeValue = 0;
+                    //
+                    //     }
+                    // }
                 }
 
                 // If the grade value retrieved is not a number, default the value to 0

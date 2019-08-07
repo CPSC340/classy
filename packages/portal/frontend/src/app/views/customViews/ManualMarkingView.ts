@@ -135,42 +135,95 @@ export class ManualMarkingView extends StudentView {
                     defaultSort: false,
                     sortDown: false,
                     style: `padding-left: 1em; padding-right: 1em; text-align: left`,
-                }, {
-                    id: `letterGrade`,
-                    text: `Letter Grade`,
-                    sortable: false,
-                    defaultSort: false,
-                    sortDown: false,
-                    style: `padding-left: 1em; padding-right: 1em; text-align: center;`
-                }, {
-                    id: `scaledScore`,
-                    text: `Scaled Score`,
-                    sortable: false,
-                    defaultSort: false,
-                    sortDown: false,
-                    style: `padding-left: 1em; padding-right: 1em; text-align: center;`
-                }, {
+                }];
+
+                if (GradingPageView.LETTER_GRADES_ENABLED === true) {
+                    headers.push({
+                        id: `letterGrade`,
+                        text: `Letter Grade`,
+                        sortable: false,
+                        defaultSort: false,
+                        sortDown: false,
+                        style: `padding-left: 1em; padding-right: 1em; text-align: center;`
+                    });
+                    headers.push({
+                        id: `scaledScore`,
+                        text: `Scaled Score`,
+                        sortable: false,
+                        defaultSort: false,
+                        sortDown: false,
+                        style: `padding-left: 1em; padding-right: 1em; text-align: center;`
+                    });
+                }
+
+                headers.push({
                     id: `grade`,
                     text: `Grade`,
                     sortable: false,
                     defaultSort: false,
                     sortDown: false,
                     style: `padding-left: 1em; padding-right: 1em; text-align: center;`
-                }, {
+                });
+                headers.push({
                     id: `outOf`,
                     text: `Out Of`,
                     sortable: false,
                     defaultSort: false,
                     sortDown: false,
                     style: `padding-left: 1em; padding-right: 1em; text-align: center;`
-                }, {
+                });
+                headers.push({
                     id: `feedback`,
                     text: `Feedback`,
                     sortable: false,
                     defaultSort: false,
                     sortDown: false,
                     style: `padding-left: 1em; padding-right: 1em; text-align: center;`
-                }];
+                });
+
+                // const headers: TableHeader[] = [{
+                //     id: `exerciseId`,
+                //     text: `Exercise Name`,
+                //     sortable: false,
+                //     defaultSort: false,
+                //     sortDown: false,
+                //     style: `padding-left: 1em; padding-right: 1em; text-align: left`,
+                // }, {
+                //     id: `letterGrade`,
+                //     text: `Letter Grade`,
+                //     sortable: false,
+                //     defaultSort: false,
+                //     sortDown: false,
+                //     style: `padding-left: 1em; padding-right: 1em; text-align: center;`
+                // }, {
+                //     id: `scaledScore`,
+                //     text: `Scaled Score`,
+                //     sortable: false,
+                //     defaultSort: false,
+                //     sortDown: false,
+                //     style: `padding-left: 1em; padding-right: 1em; text-align: center;`
+                // }, {
+                //     id: `grade`,
+                //     text: `Grade`,
+                //     sortable: false,
+                //     defaultSort: false,
+                //     sortDown: false,
+                //     style: `padding-left: 1em; padding-right: 1em; text-align: center;`
+                // }, {
+                //     id: `outOf`,
+                //     text: `Out Of`,
+                //     sortable: false,
+                //     defaultSort: false,
+                //     sortDown: false,
+                //     style: `padding-left: 1em; padding-right: 1em; text-align: center;`
+                // }, {
+                //     id: `feedback`,
+                //     text: `Feedback`,
+                //     sortable: false,
+                //     defaultSort: false,
+                //     sortDown: false,
+                //     style: `padding-left: 1em; padding-right: 1em; text-align: center;`
+                // }];
 
                 const st = new SortableTable(headers, `#studentGradeBreakdownTable`);
                 let totalGrade: number = 0;
@@ -194,18 +247,20 @@ export class ManualMarkingView extends StudentView {
                             const gradeOutOf = subRubric.outOf;
                             // const gradeRatio: number = (gradeValue / gradeOutOf) * 100;
 
-                            const letterGrade = GradingPageView.getLetterGrade(gradeValue, gradeOutOf);
-                            const letterMidpoint = GradingPageView.getLetterGradeMidpoint(letterGrade);
+                            if (GradingPageView.LETTER_GRADES_ENABLED) {
+                                const letterGrade = GradingPageView.getLetterGrade(gradeValue, gradeOutOf);
+                                const letterMidpoint = GradingPageView.getLetterGradeMidpoint(letterGrade);
 
-                            newRow.push({
-                                value: letterGrade,
-                                html: letterGrade,
-                            });
+                                newRow.push({
+                                    value: letterGrade,
+                                    html: letterGrade,
+                                });
 
-                            newRow.push({
-                                value: `${letterMidpoint.toFixed(1)} %`,
-                                html: `${letterMidpoint.toFixed(1)} %`,
-                            });
+                                newRow.push({
+                                    value: `${letterMidpoint.toFixed(1)} %`,
+                                    html: `${letterMidpoint.toFixed(1)} %`,
+                                });
+                            }
 
                             newRow.push({
                                 value: gradeValue.toFixed(2).toString(),
@@ -229,14 +284,18 @@ export class ManualMarkingView extends StudentView {
                     value: `Total Grade`,
                     html: `<b>Total Grade</b>`
                 });
-                totalRow.push({
-                    value: ``,
-                    html: ``
-                });
-                totalRow.push({
-                    value: ``,
-                    html: ``
-                });
+
+                if (GradingPageView.LETTER_GRADES_ENABLED) {
+                    totalRow.push({
+                        value: ``,
+                        html: ``
+                    });
+                    totalRow.push({
+                        value: ``,
+                        html: ``
+                    });
+                }
+
                 totalRow.push({
                     value: totalGrade.toFixed(2).toString(),
                     html: totalGrade.toFixed(2).toString()
