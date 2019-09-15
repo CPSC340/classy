@@ -15,7 +15,6 @@ import {
 import Util from "../../../../common/Util";
 import {Factory} from "../Factory";
 import {AuditLabel, Course, Deliverable, Grade, Person, PersonKind, Repository, Result, Team} from "../Types";
-import {ICourseController} from "./CourseController";
 
 import {DatabaseController} from "./DatabaseController";
 import {DeliverablesController} from "./DeliverablesController";
@@ -44,13 +43,12 @@ export class AdminController {
     protected tc = new TeamController();
     protected gc = new GradesController();
     protected resC = new ResultsController();
-    protected cc: ICourseController;
+    // protected cc: ICourseController;
     protected gh: IGitHubController = null;
 
     constructor(ghController: IGitHubController) {
         Log.trace("AdminController::<init>");
         this.gh = ghController;
-        this.cc = Factory.getCourseController(ghController);
     }
 
     /**
@@ -61,6 +59,7 @@ export class AdminController {
      */
     public async processNewAutoTestGrade(grade: AutoTestGradeTransport): Promise<boolean> {
         Log.info("AdminController::processNewAutoTestGrade( .. ) - start");
+        const cc = await Factory.getCourseController(this.gh);
 
         try {
             Log.info("AdminController::processNewAutoTestGrade( .. ) - payload: " + JSON.stringify(grade));
@@ -96,7 +95,7 @@ export class AdminController {
                 };
 
                 const existingGrade = await this.gc.getGrade(personId, grade.delivId);
-                const shouldSave = await this.cc.handleNewAutoTestGrade(deliv, newGrade, existingGrade);
+                const shouldSave = await cc.handleNewAutoTestGrade(deliv, newGrade, existingGrade);
 
                 if (shouldSave === true) {
                     await this.dbc.writeAudit(AuditLabel.GRADE_AUTOTEST, 'AutoTest',
@@ -617,6 +616,7 @@ export class AdminController {
      */
     public async planProvision(deliv: Deliverable, formSingleTeams: boolean): Promise<RepositoryTransport[]> {
         Log.info("AdminController::planProvision( " + deliv.id + ", " + formSingleTeams + " ) - start");
+        const cc = await Factory.getCourseController(this.gh);
         let allPeople: Person[] = await this.pc.getAllPeople();
 
         // remove all withdrawn people, we don't need to provision these
@@ -624,10 +624,9 @@ export class AdminController {
 
         const allTeams: Team[] = await this.tc.getAllTeams();
 
-        if (deliv.teamMaxSize === 1 || deliv.teamMinSize === 1) {
+        if (deliv.teamMaxSize === 1) {
             formSingleTeams = true;
-            Log.info(`AdminController::planProvision( .. ) - team minSize: ${deliv.teamMinSize}; ` +
-                `team maxSize: ${deliv.teamMaxSize}; formSingleTeams forced to true`);
+            Log.info("AdminController::planProvision( .. ) - team maxSize 1: formSingleTeams forced to true");
         }
 
         const delivTeams: Team[] = [];
@@ -664,12 +663,10 @@ export class AdminController {
         if (formSingleTeams === true) {
             // now create teams for individuals
             for (const individual of allPeople) {
-                if (individual.kind === PersonKind.STUDENT) {
-                    const names = await this.cc.computeNames(deliv, [individual]);
+                const names = await cc.computeNames(deliv, [individual]);
 
-                    const team = await this.tc.formTeam(names.teamName, deliv, [individual], false);
-                    delivTeams.push(team);
-                }
+                const team = await this.tc.formTeam(names.teamName, deliv, [individual], false);
+                delivTeams.push(team);
             }
         }
 
@@ -686,7 +683,7 @@ export class AdminController {
             for (const pId of delivTeam.personIds) {
                 people.push(await this.pc.getPerson(pId));
             }
-            const names = await this.cc.computeNames(deliv, people);
+            const names = await cc.computeNames(deliv, people);
 
             Log.trace('AdminController::planProvision( .. ) - delivTeam: ' + delivTeam.id +
                 '; computed team: ' + names.teamName + '; computed repo: ' + names.repoName);
@@ -812,6 +809,8 @@ export class AdminController {
      */
     public async planRelease(deliv: Deliverable): Promise<Repository[]> {
         Log.info("AdminController::planRelease( " + deliv.id + " ) - start");
+        const cc = await Factory.getCourseController(this.gh);
+
         const allTeams: Team[] = await this.tc.getAllTeams();
         Log.info("AdminController::planRelease( " + deliv.id + " ) - # teams: " + allTeams.length);
 
@@ -839,7 +838,7 @@ export class AdminController {
                 for (const pId of team.personIds) {
                     people.push(await this.dbc.getPerson(pId));
                 }
-                const names = await this.cc.computeNames(deliv, people);
+                const names = await cc.computeNames(deliv, people);
                 const repo = await this.dbc.getRepository(names.repoName);
 
                 /* istanbul ignore else */
@@ -876,7 +875,7 @@ export class AdminController {
         return allRepos;
     }
 
-    public async performRelease(repos: Repository[], asCollaborators: boolean = false): Promise<RepositoryTransport[]> {
+    public async performRelease(repos: Repository[]): Promise<RepositoryTransport[]> {
         const gha = GitHubActions.getInstance(true);
         const ghc = new GitHubController(gha);
 
@@ -894,7 +893,7 @@ export class AdminController {
                     }
 
                     // actually release the repo
-                    const success = await ghc.releaseRepository(repo, teams, asCollaborators);
+                    const success = await ghc.releaseRepository(repo, teams, false);
 
                     if (success === true) {
                         Log.info("AdminController::performRelease( .. ) - success: " + repo.id +

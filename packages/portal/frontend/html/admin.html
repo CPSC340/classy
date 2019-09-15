@@ -9,7 +9,7 @@
         </div>
     </ons-toolbar>
 
-    <ons-tabbar id='adminTabbar' position="top">
+    <ons-tabbar id='adminTabbar' position="top" animation="none">
         <!--
         <ons-tab id="AdminDeliverableTab" page="deliverables.html" label="Deliverables" icon="ion-home, material:md-home" active>
         </ons-tab>
@@ -22,11 +22,6 @@
 
         <ons-tab id="AdminGradeTab" page="grades.html" label="Grades" icon="ion-ios-paper-outline">
         </ons-tab>
-
-        <!-- CS340 Custom Edit: BEGIN -->
-        <ons-tab id="AdminMarkingTab" page="marking.html" label="Marking" icon="ion-ios-paper-outline">
-        </ons-tab>
-        <!-- CS340 Custom Edit: END-->
 
         <ons-tab id="AdminResultTab" page="results.html" label="Results" icon="ion-android-checkmark-circle">
         </ons-tab>
@@ -104,36 +99,15 @@
         <ons-page id="AdminGrades">
             <ons-list id="AdminGradesList">
                 <ons-list-header>Grade Summary</ons-list-header>
-                <div id="gradesSummaryTable" style="width:100%;"></div>
+                <div id="gradesSummaryTable" style="width:100%; overflow-x: scroll; white-space: nowrap;"></div>
                 <ons-list-header>Deliverable Grades</ons-list-header>
-                <div id="gradesListTable" style="width:100%;"></div>
+                <div id="gradesListTable" style="width:100%; overflow-x: scroll; white-space: nowrap;"></div>
                 <div id="gradesListTableNone" class="noResultsRow">
                     No Results
                 </div>
             </ons-list>
         </ons-page>
     </template>
-
-    <!-- CS340 Addition - Begin -->
-    <template id="marking.html">
-        <ons-page id="AdminMarking">
-            <ons-list id="AdminMarkingList">
-                <ons-list-header>Deliverable Select</ons-list-header>
-                <div id="markingDeliverableSelectBox" style="text-align:center; padding: 1em; width:100%;">
-                    Deliverable:
-                    <select id="markingDeliverableSelect" style="margin-left: 1em;">
-                        <option value="any">-All-</option>
-                    </select>
-                </div>
-                <ons-list-header>Deliverable Grades</ons-list-header>
-                <div id="markingListTable" style="width:100%;"></div>
-                <div id="markingListTableNone" class="noResultsRow">
-                    No Results
-                </div>
-            </ons-list>
-        </ons-page>
-    </template>
-    <!-- CS340 Addition - End -->
 
     <template id="results.html">
         <ons-page id="AdminResults">
@@ -215,6 +189,23 @@
                         ACCT and SNUM are invariants and cannot change although ther fields can be updated (changing GitHub logins presents
                         its own issues that require manual effort on the part of course staff to handle).
                         Pre-existing Students, Teams, and Repositories <i>WILL NOT</i> be affected.
+                    </div>
+                </ons-list-item>
+
+                <ons-list-item expandable>
+                    <div class="left settingIcon">
+                        <ons-icon icon="fa-user-edit"></ons-icon>
+                    </div>
+                    <div class="center">
+                        Update classlist via Classlist API
+                        <ons-button id="adminUpdateClasslist" modifier="medium" style="margin-left: 1em">Update Classlist
+                        </ons-button>
+                    </div>
+                    <div class="expandable-content">
+                        BETA: This will update your classlist with the latest Classlist data
+
+                        This will act as if you uploaded your own classlist. The goal is to set this on a timer and automatically update it 
+                        once we further understand the implications of this logic.
                     </div>
                 </ons-list-item>
 
@@ -939,8 +930,8 @@
                         </div>
                         <div class="expandable-content">
                             See <a href="https://docs.docker.com/engine/reference/commandline/build/#git-repositories">docker build</a>
-                            documentation for details about how to construct the URL. The URL should start with "https://". If the
-                            repository is private, set GH_DOCKER_TOKEN in the .env. Do not include the token in the URL.
+                            documentation for details about how to construct the URL. The URL should start with "https://" and end with 
+                            ".git" suffix. If the repository is private, set GH_DOCKER_TOKEN in the .env. Do not include the token in the URL.
                         </div>
                     </ons-list-item>
 

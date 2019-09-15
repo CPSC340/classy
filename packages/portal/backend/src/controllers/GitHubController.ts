@@ -3,10 +3,11 @@ import Log from "../../../../common/Log";
 import Util from "../../../../common/Util";
 
 import {Repository, Team} from "../Types";
-import {AssignmentController} from "./AssignmentController";
 import {DatabaseController} from "./DatabaseController";
 import {IGitHubActions} from "./GitHubActions";
 import {TeamController} from "./TeamController";
+
+import * as rp from "request-promise-native";
 
 export interface IGitHubController {
     /**
@@ -22,7 +23,7 @@ export interface IGitHubController {
      */
     provisionRepository(repoName: string, teams: Team[], sourceRepo: string, shouldRelease: boolean): Promise<boolean>;
 
-    createPullRequest(repoName: string, prName: string): Promise<boolean>;
+    createPullRequest(repo: Repository, prName: string): Promise<boolean>;
 
     getRepositoryUrl(repo: Repository): Promise<string>;
 
@@ -59,143 +60,6 @@ export class GitHubController implements IGitHubController {
         const teamUrl = c.getProp(ConfigKey.githubHost) + '/orgs/' + c.getProp(ConfigKey.org) + '/teams/' + team.id;
         Log.info("GitHubController::getTeamUrl( " + team.id + " ) - URL: " + teamUrl);
         return teamUrl;
-    }
-
-    /**
-     * Creates a repository, that might have an optional path as a subset
-     * @param {string} repoName
-     * @param {team[]} teams
-     * @param {string} importURL
-     * @param {string} path
-     * @returns {Promise<boolean>}
-     */
-    public async createRepositoryWithPath(repoName: string,
-                                          teams: Team[],
-                                          importURL: string,
-                                          path?: string): Promise<boolean> {
-        Log.info("GitHubController::createRepositoryWithPath( " + repoName + ", ...) - start");
-        const dbc = DatabaseController.getInstance();
-
-        const start = Date.now();
-
-        if (teams.length < 1 || teams.length > 1) {
-            Log.warn("GitHubController::createRepositoryWithPath(..) - only the first team will be added to the repo");
-        }
-
-        Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - checking to see if repo already exists");
-        const repo = await dbc.getRepository(repoName);
-        if (repo === null) {
-            // repo object should be in datastore before we try to provision it
-            throw new Error("GitHubController::createRepositoryWithPath( " + repoName +
-                " ) - repo does not exist in datastore (but should)");
-        }
-
-        // const gh = GitHubActions.getInstance(true);
-        const repoExists = await this.gha.repoExists(repoName);
-        Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - repo exists: " + repoExists);
-        if (repoExists === true) {
-            // this is fatal, we can't provision a repo that already exists
-            Log.error("GitHubController::createRepositoryWithPath( " + repoName + " ) - " +
-                "repo already exists on GitHub; provisioning failed");
-            throw new Error("createRepositoryWithPath( " + repoName + " ) failed; Repository " + repoName + " already exists.");
-            // return false;
-        }
-
-        try {
-            // create a repo
-            Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - creating GitHub repo");
-            const repoVal = await this.gha.createRepo(repoName);
-            Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - GitHub repo created");
-
-            // NOTE: this isn't done here on purpose: we consider the repo to be provisioned once the whole flow is done
-            // callers of this method should instead set the URL field
-            // repo.URL = repoVal;
-            repo.custom.githubCreated = true;
-            await dbc.writeRepository(repo);
-
-            Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - val: " + repoVal);
-        } catch (err) {
-            Log.error("GitHubController::createRepositoryWithPath( " + repoName + " ) - create repo ERROR: " + err);
-            // repo creation failed; remove if needed (requires createRepo be permissive if already exists)
-            const res = await this.gha.deleteRepo(repoName);
-            Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - repo removed: " + res);
-            throw new Error("createRepositoryWithPath( " + repoName + " ) failed; failed to create repo; ERROR: " + err.message);
-        }
-
-        try {
-            let teamValue = null;
-            try {
-                Log.info("GitHubController::createRepositoryWithPath() - create GitHub team");
-                for (const team of teams) {
-
-                    const dbT = await dbc.getTeam(team.id);
-                    if (dbT === null) {
-                        throw new Error("GitHubController::createRepositoryWithPath( " + repoName + " ) - " +
-                            'team does not exist in datastore (but should): ' + team.id);
-                    }
-
-                    if (AssignmentController.COLLABORATOR_FLAG === true) {
-                        team.custom.githubAttached = false;
-                        await dbc.writeTeam(team);
-                    } else {
-                        teamValue = await this.gha.createTeam(team.id, 'push');
-                        Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - createTeam: " + teamValue.teamName);
-
-                        if (teamValue.githubTeamNumber > 0) {
-                            // worked
-                            team.URL = teamValue.URL;
-                            team.githubId = teamValue.githubTeamNumber;
-                            team.custom.githubAttached = false; // attaching happens in release
-                            await dbc.writeTeam(team);
-                        }
-
-                        Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - add members to GitHub team: " + team.id);
-                        const addMembers = await this.gha.addMembersToTeam(teamValue.teamName, teamValue.githubTeamNumber, team.personIds);
-                        Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - addMembers: " + addMembers.teamName);
-
-                    }
-
-                }
-            } catch (err) {
-                Log.warn("GitHubController::createRepositoryWithPath() - create team ERROR: " + err);
-                // swallow these errors and keep going
-            }
-
-            Log.trace("GitHubController::createRepositoryWithPath() - add staff team to repo");
-            const staffTeamNumber = await new TeamController().getTeamNumber('staff');
-            //  const staffTeamNumber = await this.gha.getTeamNumber('staff');
-            Log.trace('GitHubController::createRepositoryWithPath(..) - staffTeamNumber: ' + staffTeamNumber);
-            const staffAdd = await this.gha.addTeamToRepo(staffTeamNumber, repoName, 'admin');
-            Log.trace('GitHubController::createRepositoryWithPath(..) - team name: ' + staffAdd.teamName);
-
-            // add webhooks
-            const host = Config.getInstance().getProp(ConfigKey.publichostname);
-            const WEBHOOKADDR = host + '/portal/githubWebhook';
-            Log.trace("GitHubController::createRepositoryWithPath() - add webhook to: " + WEBHOOKADDR);
-            const createHook = await this.gha.addWebhook(repoName, WEBHOOKADDR);
-            Log.trace('GitHubController::createRepositoryWithPath(..) - webook successful: ' + createHook);
-
-            // perform import
-            const c = Config.getInstance();
-            const targetUrl = c.getProp(ConfigKey.githubHost) + '/' + c.getProp(ConfigKey.org) + '/' + repoName;
-
-            Log.trace("GitHubController::createRepositoryWithPath() - importing project (slow)");
-            let output;
-            if (typeof path !== "undefined" && path !== null && path.trim() !== "") {
-                output = await this.gha.importRepoFS(importURL, targetUrl, path);
-            } else {
-                output = await this.gha.importRepoFS(importURL, targetUrl);
-            }
-            Log.trace('GitHubController::createRepositoryWithPath(..) - import complete; success: ' + output);
-
-            Log.trace('GitHubController::createRepositoryWithPath(..) - successfully completed for: ' +
-                repoName + '; took: ' + Util.took(start));
-
-            return true;
-        } catch (err) {
-            Log.error('GitHubController::createRepositoryWithPath(..) - ERROR: ' + err);
-        }
-        return false;
     }
 
     /**
@@ -309,20 +173,8 @@ export class GitHubController implements IGitHubController {
             if (asCollaborators) {
                 Log.info("GitHubController::releaseRepository(..) - releasing repository as " +
                     "individual collaborators");
-                await this.checkDatabase(null, team.id);
-
-                const personIds = team.personIds;
-                const githubIds: string[] = [];
-                for (const personId of personIds) {
-                    const personRecord = await this.dbc.getPerson(personId);
-
-                    githubIds.push(personRecord.githubId);
-                }
-
-                const success = await this.gha.addCollaborators(repo.id, githubIds, "push");
-                team.custom.githubAttached = true;
-                await this.dbc.writeTeam(team);
-                Log.info(`GithubController::releaseRepository(..) - success: ${success}`);
+                Log.error("GitHubController::releaseRepository(..) - ERROR: Not implemented");
+                throw new Error("GitHubController - w/ collaborators NOT IMPLEMENTED");
             } else {
 
                 await this.checkDatabase(null, team.id);
@@ -378,7 +230,7 @@ export class GitHubController implements IGitHubController {
         }
 
         Log.info("GitHubController::provisionRepository( " + repoName + " ) - checking to see if repo already exists");
-        const repo = await dbc.getRepository(repoName);
+        let repo = await dbc.getRepository(repoName);
         if (repo === null) {
             // repo object should be in datastore before we try to provision it
             throw new Error("GitHubController::provisionRepository( " + repoName +
@@ -401,9 +253,11 @@ export class GitHubController implements IGitHubController {
             const repoVal = await this.gha.createRepo(repoName);
             Log.info("GitHubController::provisionRepository( " + repoName + " ) - GitHub repo created");
 
-            // NOTE: this isn't done here on purpose: we consider the repo to be provisioned once the whole flow is done
+            // NOTE: this statement commented below isn't done here on purpose;
+            //    repo.url = repoVal
+            // we consider the repo to be provisioned once the whole flow is done
             // callers of this method should instead set the URL field
-            // repo.URL = repoVal;
+            repo = await dbc.getRepository(repoName);
             repo.custom.githubCreated = true;
             await dbc.writeRepository(repo);
 
@@ -442,7 +296,15 @@ export class GitHubController implements IGitHubController {
                     }
 
                     Log.info("GitHubController::provisionRepository( " + repoName + " ) - add members to GitHub team: " + team.id);
-                    const addMembers = await this.gha.addMembersToTeam(teamValue.teamName, teamValue.githubTeamNumber, team.personIds);
+
+                    // convert personIds to githubIds
+                    const memberGithubIds: string[] = [];
+                    for (const personId of team.personIds) {
+                        const person = await this.dbc.getPerson(personId);
+                        memberGithubIds.push(person.githubId);
+                    }
+
+                    const addMembers = await this.gha.addMembersToTeam(teamValue.teamName, teamValue.githubTeamNumber, memberGithubIds);
                     Log.info("GitHubController::provisionRepository( " + repoName + " ) - addMembers: " + addMembers.teamName);
 
                     // if (shouldRelease === true) {
@@ -502,9 +364,68 @@ export class GitHubController implements IGitHubController {
         return false;
     }
 
-    public async createPullRequest(repoName: string, prName: string): Promise<boolean> {
-        Log.error("GitHubController::createPullRequest(..) - NOT IMPLEMENTED");
-        throw new Error("NOT IMPLEMENTED");
+    /**
+     * Calls the patchtool
+     * @param {Repository} repo: Repo to be patched
+     * @param {string} prName: Name of the patch to apply
+     * @param {boolean} dryrun: Whether to do a practice patch
+     *        i.e.: if dryrun is false  -> patch is applied to repo
+     *              elif dryrun is true -> patch is not applied,
+     *                   but otherwise will behave as if it was
+     */
+    public async createPullRequest(repo: Repository, prName: string, dryrun: boolean = false): Promise<boolean> {
+        Log.info(`GitHubController::createPullRequest(..) - Repo: (${repo.id}) start`);
+        if (repo.cloneURL === null || repo.cloneURL === undefined) {
+            Log.error(`GitHubController::createPullRequest(..) - ${repo.id} didn't have a valid cloneURL associated with it.`);
+            return false;
+        }
+
+        const baseUrl: string = Config.getInstance().getProp(ConfigKey.patchToolUrl);
+        const patchUrl: string = `${baseUrl}/autopatch`;
+        const updateUrl: string = `${baseUrl}/update`;
+        const qs: {[key: string]: string | boolean} = {patch_id: prName, github_url: repo.cloneURL, dryrun: dryrun};
+
+        const options = {
+            method: 'POST',
+            rejectUnauthorized: false,
+            strictSSL: false,
+        };
+
+        let result;
+
+        try {
+            await rp(patchUrl, {qs, ...options});
+            Log.info("GitHubController::createPullRequest(..) - Patch applied successfully");
+            return true;
+        } catch (err) {
+            result = err;
+        }
+
+        switch (result.statusCode) {
+            case 424:
+                Log.info(`GitHubController::createPullRequest(..) - ${prName} wasn't found by the patchtool. Updating patches.`);
+                try {
+                    await rp(updateUrl, options);
+                    Log.info(`GitHubController::createPullRequest(..) - Patches updated successfully. Retrying.`);
+                    await rp(patchUrl, {qs, ...options});
+                    Log.info("GitHubController::createPullRequest(..) - Patch applied successfully on second attempt");
+                    return true;
+                } catch (err) {
+                    Log.error("GitHubController::createPullRequest(..) - Patch failed on second attempt. Message from patchtool server:" +
+                        result.message);
+                    return false;
+                }
+            case 500:
+                Log.error(
+                    `GitHubController::createPullRequest(..) - patchtool internal error. Message from patchtool server: ${result.message}`
+                );
+                return false;
+            default:
+                Log.error(
+                    `GitHubController::createPullRequest(..) - Wasn't able to make a connection to patchtool. Error: ${result.message}`
+                );
+                return false;
+        }
     }
 
     /**
@@ -585,7 +506,7 @@ export class TestGitHubController implements IGitHubController {
         return true;
     }
 
-    public async createPullRequest(repoName: string, prName: string): Promise<boolean> {
+    public async createPullRequest(repo: Repository, prName: string): Promise<boolean> {
         Log.warn("TestGitHubController::createPullRequest(..) - TEST");
         return true;
     }

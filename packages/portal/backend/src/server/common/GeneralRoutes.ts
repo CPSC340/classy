@@ -27,6 +27,7 @@ import {RepositoryController} from "../../controllers/RepositoryController";
 import {TeamController} from "../../controllers/TeamController";
 import {Factory} from "../../Factory";
 import {AuditLabel, Person} from "../../Types";
+import {ClasslistAgent} from "./ClasslistAgent";
 
 import IREST from "../IREST";
 import AdminRoutes from "./AdminRoutes";
@@ -58,6 +59,9 @@ export default class GeneralRoutes implements IREST {
 
         // server.get('/portal/resource/:path', GeneralRoutes.getResource);
         server.get('/portal/resource/.*', GeneralRoutes.getResource);
+
+        // IP restricted
+        server.put('/portal/classlist', GeneralRoutes.updateClasslist);
     }
 
     public static getConfig(req: any, res: any, next: any) {
@@ -303,6 +307,40 @@ export default class GeneralRoutes implements IREST {
         });
     }
 
+    public static async updateClasslist(req: any, res: any, next: any) {
+        Log.info('GeneralRoutes::updateClasslist(..) - start');
+        const pc = new PersonController();
+        const ca = new ClasslistAgent();
+        const ipAddr = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        const ipReg: RegExp = /(142\.103\.[1-9]+\.[1-9]+)/;
+        let auditInfo: string;
+
+        if (ipReg.test(ipAddr) === false) {
+            return await GeneralRoutes.handleError(403, 'Forbidden error; user not privileged', res, next);
+        }
+
+        auditInfo = req.headers.user || ipAddr;
+
+        try {
+            const data = await ca.fetchClasslist();
+            const people = await ca.processClasslist(auditInfo, null, data);
+
+            let payload: Payload;
+
+            if (people.length) {
+                payload = {success: {message: 'Classlist upload successful. ' + people.length + ' students processed.'}};
+                res.send(200, payload);
+                Log.info('GeneralRoutes::updateClasslist(..) - done: ' + payload.success.message);
+            } else {
+                const msg = 'Classlist upload not successful; no students were processed from CSV.';
+                return GeneralRoutes.handleError(400, msg, res, next);
+            }
+        } catch (err) {
+            const msg = 'Classlist upload not successful; no students were processed from CSV.';
+            return GeneralRoutes.handleError(400, msg, res, next);
+        }
+    }
+
     private static async performPostTeam(user: string, token: string, requestedTeam: TeamFormationTransport): Promise<TeamTransport> {
         Log.trace('GeneralRoutes::performPostTeam(..) - team: ' + JSON.stringify(requestedTeam));
         const ac = new AuthController();
@@ -353,7 +391,7 @@ export default class GeneralRoutes implements IREST {
                 }
             }
 
-            const cc = Factory.getCourseController(new GitHubController(GitHubActions.getInstance()));
+            const cc = await Factory.getCourseController(new GitHubController(GitHubActions.getInstance()));
             const deliv = await dc.getDeliverable(requestedTeam.delivId);
             const names = await cc.computeNames(deliv, people);
 

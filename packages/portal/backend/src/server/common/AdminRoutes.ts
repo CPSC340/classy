@@ -30,6 +30,7 @@ import {PersonController} from "../../controllers/PersonController";
 import {RepositoryController} from "../../controllers/RepositoryController";
 import {TeamController} from "../../controllers/TeamController";
 import {Factory} from "../../Factory";
+import {ClasslistAgent} from "./ClasslistAgent";
 
 import {AuditLabel, Person} from "../../Types";
 
@@ -60,6 +61,7 @@ export default class AdminRoutes implements IREST {
 
         // admin-only functions
         server.post('/portal/admin/classlist', AdminRoutes.isAdmin, AdminRoutes.postClasslist);
+        server.put('/portal/admin/classlist', AdminRoutes.isAdmin, AdminRoutes.updateClasslist);
         server.post('/portal/admin/grades/:delivId', AdminRoutes.isAdmin, AdminRoutes.postGrades);
         server.post('/portal/admin/deliverable', AdminRoutes.isAdmin, AdminRoutes.postDeliverable);
         server.post('/portal/admin/team', AdminRoutes.isAdmin, AdminRoutes.postTeam);
@@ -287,7 +289,7 @@ export default class AdminRoutes implements IREST {
      */
     private static deleteDeliverable(req: any, res: any, next: any) {
         Log.info('AdminRoutes::deleteDeliverable(..) - start');
-        const cc = Factory.getCourseController(AdminRoutes.ghc);
+        // const cc = Factory.getCourseController(AdminRoutes.ghc);
 
         // isAdmin prehandler verifies that only valid users can do this
 
@@ -513,6 +515,32 @@ export default class AdminRoutes implements IREST {
         });
     }
 
+    public static async updateClasslist(req: any, res: any, next: any) {
+        Log.info('AdminRoutes::updateClasslist(..) - start');
+        const pc = new PersonController();
+        const ca = new ClasslistAgent();
+        const auditUser = req.headers.user;
+
+        try {
+            const data = await ca.fetchClasslist();
+            const people = await ca.processClasslist(auditUser, null, data);
+
+            let payload: Payload;
+
+            if (people.length) {
+                payload = {success: {message: 'Classlist upload successful. ' + people.length + ' students processed.'}};
+                res.send(200, payload);
+                Log.info('AdminRoutes::updateClasslist(..) - done: ' + payload.success.message);
+            } else {
+                const msg = 'Classlist upload not successful; no students were processed from CSV.';
+                return AdminRoutes.handleError(400, msg, res, next);
+            }
+        } catch (err) {
+            const msg = 'Classlist upload not successful; no students were processed from CSV.';
+            return AdminRoutes.handleError(400, msg, res, next);
+        }
+    }
+
     private static postClasslist(req: any, res: any, next: any) {
         Log.info('AdminRoutes::postClasslist(..) - start');
 
@@ -523,9 +551,9 @@ export default class AdminRoutes implements IREST {
             // const user = req.params.user;
             const userName = AdminRoutes.getUser(req);
             const path = req.files.classlist.path; // this is brittle, but if it fails it will just trigger the exception
+            const ca = new ClasslistAgent();
 
-            const csvParser = new CSVParser();
-            csvParser.processClasslist(userName, path).then(function(people) {
+            ca.processClasslist(userName, path, null).then(function(people) {
                 if (people.length > 0) {
                     const payload: Payload = {
                         success: {
@@ -834,7 +862,7 @@ export default class AdminRoutes implements IREST {
             const dbc = DatabaseController.getInstance();
             await dbc.writeAudit(AuditLabel.REPO_RELEASE, personId, {}, {}, {repoId: repoId});
 
-            const releaseSucceeded = await ac.performRelease([repo], true);
+            const releaseSucceeded = await ac.performRelease([repo]);
             Log.info('AdminRoutes::performRelease() - success; # results: ' + releaseSucceeded.length +
                 '; took: ' + Util.took(start));
             return releaseSucceeded;
@@ -955,7 +983,7 @@ export default class AdminRoutes implements IREST {
             }
         }
 
-        const cc = Factory.getCourseController(new GitHubController(GitHubActions.getInstance()));
+        const cc = await Factory.getCourseController(new GitHubController(GitHubActions.getInstance()));
         const names = await cc.computeNames(deliv, people);
         const team = await tc.formTeam(names.teamName, deliv, people, true);
 
