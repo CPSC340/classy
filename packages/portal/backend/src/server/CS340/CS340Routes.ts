@@ -46,6 +46,8 @@ export default class CS340Routes implements IREST {
 
         server.get("/portal/cs340/isFinalGradeReleased", CS340Routes.isFinalGradeReleased);
         server.post("/portal/cs340/toggleFinalGradeRelease", CS340Routes.toggleFinalGradeRelease);
+
+        server.get("/portal/cs340/retrieveStudentsGrades/:delivId", CS340Routes.retrieveStudentsGrades);
     }
     public static async getNextUngraded(req: any, res: any, next: any) {
         Log.info(`CS340Routes::getNextUngraded(..) - start`);
@@ -678,6 +680,51 @@ export default class CS340Routes implements IREST {
         }
 
         return next();
+    }
+
+    public static async retrieveStudentsGrades(req: any, res: any, next: any) {
+        Log.info(`CS340Routes::retrieveStudentsGrades(..) - start`);
+
+        const user = req.headers.user;
+        const token = req.headers.token;
+
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+
+        if (!isValid.isAdmin) {
+            Log.info(`CS340Routes::retrieveStudentsGrades(..) - Unauthorized usage of API: ${user}`);
+        } else {
+            Log.info(`CS340Routes::retrieveStudentsGrades(..) - Authorized`);
+            const delivId = req.params.delivId;
+
+            const db: DatabaseController = DatabaseController.getInstance();
+            const grades = await db.getGrades();
+
+            const filteredGrades: any = {};
+
+            grades.filter((grade) => {
+                return grade.delivId === delivId;
+            }).forEach((grade) => {
+                const rubricGrades: any = {};
+
+                const questions = grade.custom.assignmentGrade.questions;
+
+                questions.forEach((question) => {
+                    rubricGrades[question.name] = [];
+                    question.subQuestions.forEach((subQuestion) => {
+                        const rubricRepresentation: any = {};
+                        rubricRepresentation[subQuestion.name] = subQuestion.grade;
+                        rubricRepresentation["feedback"] = subQuestion.feedback;
+                        rubricGrades[question.name].push(rubricRepresentation);
+                    });
+                });
+
+                filteredGrades[grade.personId] = rubricGrades;
+                Log.info(`CS340Routes::retrieveStudentsGrades(..) - RubricGrade: ${JSON.stringify(rubricGrades)}`);
+            });
+
+            res.send(200, JSON.stringify(filteredGrades));
+        }
     }
 
     /**

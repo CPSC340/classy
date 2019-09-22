@@ -59,6 +59,8 @@ export class ManualMarkingAdminView extends AdminView {
             }).catch((err) => {
                 Log.error(`${this.loggingName}::renderPage::AdminConfig - Error: ${JSON.stringify(err)}`);
             });
+
+            this.generateGradeExport();
         }
 
         Log.warn(`${this.loggingName}::renderPage(..) with name: ` + name + ` - complete`);
@@ -653,6 +655,103 @@ export class ManualMarkingAdminView extends AdminView {
         }).then().catch((error) => {
             Log.error(`${this.loggingName}::transitionGradingPage(..) - error: ` + JSON.stringify(error));
         });
+    }
+
+    protected async generateGradeExport(): Promise<void> {
+        const delivSelect: HTMLSelectElement = document.getElementById(`adminGradeDownloadDeliverableSelect`) as HTMLSelectElement;
+        const gradeDownloadButton: HTMLLinkElement = document.getElementById(`adminGradeDownloadButton`) as HTMLLinkElement;
+
+        if (delivSelect === null) {
+            Log.error(`Error: No delivSelect: adminGradeDownloadDeliverableSelect on page`);
+            return;
+        }
+
+        if (gradeDownloadButton === null) {
+            Log.error(`Error: No gradeDownloadButton: adminGradeDownloadButton on page`);
+            return;
+        }
+
+        const deliverables = await AdminDeliverablesTab.getDeliverables(this.remote);
+        const delivIds: string[] = deliverables.map((deliv) => {
+           return deliv.id;
+        }).sort();
+
+        delivSelect.innerHTML = '';
+        delivIds.forEach((delivId) => {
+           let value = delivId;
+           if (delivId.startsWith('--')) {
+               value = null;
+           }
+           const o: HTMLOptionElement = new Option(delivId, value, false, false);
+           delivSelect.add(o);
+        });
+
+        delivSelect.onchange = async () => {
+        // gradeDownloadButton.onclick = async () => {
+            Log.info(`-- Calling! -- ${delivSelect.value}`);
+            const delivId = delivSelect.value;
+            if (delivId.startsWith("--")) {
+                return;
+            } else {
+                Log.info(`-- We got here! --`);
+                // get the json data
+                const options: any = AdminView.getOptions();
+
+                const url = this.remote + `/portal/cs340/retrieveStudentsGrades/${delivId}`;
+                const response = await fetch(url, options);
+                if (response.status === 200) {
+                    Log.info(`ManualMarkingAdminView::generateGradeExport(..) - 200 received`);
+                    const json = await response.json();
+                    Log.info(`-- Response: ${json}`);
+
+                    const dataUri = `data:application/json;charset=utf-8, ${json}`;
+
+                    gradeDownloadButton.href = dataUri;
+                    Log.info(`-- ZOOM --`);
+                } else {
+                    Log.error(`ManualMarkingAdminView::generateGradeExport(..) - Error: Response code is: ${response.status}`);
+                }
+            }
+        };
+
+        // const newListItem: OnsListItemElement = document.createElement(`ons-list-item`) as OnsListItemElement;
+        // newListItem.setAttribute(`display`, `flex`);
+        // newListItem.classList.add(`list-item`);
+        // newListItem.setAttribute(`expandable`, ``);
+        //
+        // const elementBox: HTMLDivElement = document.createElement(`div`) as HTMLDivElement;
+        // elementBox.classList.add(`top`);
+        //
+        // const explanationBox: HTMLDivElement = document.createElement(`div`) as HTMLDivElement;
+        // explanationBox.classList.add(`expandable-content`);
+        // explanationBox.innerHTML = description;
+        //
+        // const iconBox = document.createElement(`div`);
+        // iconBox.classList.add(`left`);
+        // iconBox.classList.add(`settingIcon`);
+        // const iconElement = document.createElement(`ons-icon`);
+        // iconElement.setAttribute(`icon`, `fa-retweet`);
+        // iconBox.appendChild(iconElement);
+        //
+        // const descriptionBox = document.createElement(`div`);
+        // descriptionBox.classList.add(`center`);
+        // descriptionBox.classList.add(`settingLabel`);
+        // const descriptionElement = document.createElement(`span`);
+        // descriptionElement.setAttribute(`title`, `Download Grades`);
+        // descriptionElement.innerHTML = `Download Grades`;
+        // descriptionBox.appendChild(descriptionElement);
+        //
+        // const insertedElementBox = document.createElement(`div`);
+        // insertedElementBox.classList.add(`right`);
+        // insertedElementBox.classList.add(`settingRight`);
+        // insertedElementBox.appendChild(insertedElement);
+        //
+        // elementBox.appendChild(iconBox);
+        // elementBox.appendChild(descriptionBox);
+        // elementBox.appendChild(insertedElementBox);
+        //
+        // newListItem.appendChild(elementBox);
+        // newListItem.appendChild(explanationBox);
     }
 
     protected async generateFinalGradeSwitch(): Promise<void> {
