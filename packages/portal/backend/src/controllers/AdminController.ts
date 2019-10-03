@@ -875,7 +875,7 @@ export class AdminController {
         return allRepos;
     }
 
-    public async performRelease(repos: Repository[]): Promise<RepositoryTransport[]> {
+    public async performRelease(repos: Repository[], asCollaborators: boolean = false): Promise<RepositoryTransport[]> {
         const gha = GitHubActions.getInstance(true);
         const ghc = new GitHubController(gha);
 
@@ -893,7 +893,7 @@ export class AdminController {
                     }
 
                     // actually release the repo
-                    const success = await ghc.releaseRepository(repo, teams, false);
+                    const success = await ghc.releaseRepository(repo, teams, asCollaborators);
 
                     if (success === true) {
                         Log.info("AdminController::performRelease( .. ) - success: " + repo.id +
@@ -923,6 +923,7 @@ export class AdminController {
 
         return releasedRepositoryTransport;
     }
+
 
     public async makeReposReadOnly(deliv: Deliverable): Promise<RepositoryTransport[]> {
         Log.info("AdminController::makeReposReadOnly( " + deliv.id + " ) - start");

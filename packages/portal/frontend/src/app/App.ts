@@ -26,7 +26,7 @@ export class App {
         Log.trace('App::<init> - start');
 
         // configure the frontend and backend URLs
-        // uses the browser location and figures it out from there
+        // uses the browser location and figures it out from Fthere
         let location = window.location.href;
         location = location.substr(0, location.indexOf('/', 10)); // peel off anything after the host/port
         Log.trace('App::<init> - location: ' + location);

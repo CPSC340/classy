@@ -214,6 +214,17 @@ export interface IGitHubActions {
     getTeamsOnRepo(repoId: string): Promise<GitTeamTuple[]>;
 
     getTeam(teamNumber: number): Promise<GitTeamTuple | null>;
+
+
+    /**
+     * Adds the userIds to repository repoId as collaborators, with permissionLevel access
+     * @param {string} repoId
+     * @param {string[]} userIds: list of github ids
+     * @param {string} permissionLevel: one of ["pull", "push"]
+     */
+    addCollaborators(repoId: string, userIds: string[], permissionLevel: string): Promise<boolean>;
+
+    listCollaborators(repoId: string): Promise<Array<{id: string, permission: string}>>;
 }
 
 export class GitHubActions implements IGitHubActions {
@@ -1576,6 +1587,82 @@ export class GitHubActions implements IGitHubActions {
         return true;
     }
 
+    public async addCollaborators(repoId: string, userIds: string[], permissionLevel: string): Promise<boolean> {
+        // PUT /repos/:owner/:repo/collaborators/:username
+        Log.trace(`GithubActions::addCollaborators(${repoId}, ${userIds}, ${permissionLevel}) - start`);
+
+        const start = Date.now();
+        let completeSuccess: boolean = true;
+        try {
+            for (const userId of userIds) {
+                const uri = `${this.apiPath}/repos/${this.org}/${repoId}/collaborators/${userId}`;
+                const options: any = {
+                    method: 'PUT',
+                    uri: uri,
+                    headers: {
+                        'Authorization': this.gitHubAuthToken,
+                        'User-Agent': this.gitHubUserName,
+                        'Accept': 'application/json'
+                    },
+                    body: {
+                        permission: permissionLevel
+                    },
+                    json: true
+                };
+
+                const response = await rp(options);
+            }
+        } catch (error) {
+            Log.trace(`GithubActions::addCollaborators(..) - Error: ${error}`);
+            completeSuccess = false;
+        }
+
+        // for (const response of responses) {
+        //     completeSuccess = completeSuccess && ((response.status === 201) || (response.status === 204));
+        // }
+
+        Log.trace(`GitHubAction::addCollaborators(..) - complete; result: ${completeSuccess}, took: ${Util.took(start)}`);
+        return completeSuccess;
+    }
+
+    public async listCollaborators(repoId: string): Promise<Array<{id: string, permission: string}>> {
+        // GET /repos/:owner/:repo/collaborators
+        Log.trace(`GithubActions::listCollaborators(${repoId}) - start`);
+        const collaborators: Array<{id: string, permission: string}> = [];
+
+        const uri = `${this.apiPath}/repos/${this.org}/${repoId}/collaborators`;
+        const options: any = {
+            method:  'GET',
+            uri: uri,
+            headers: {
+                'Authorization': this.gitHubAuthToken,
+                'User-Agent':    this.gitHubUserName,
+                'Accept':        'application/json'
+            },
+            json:    true
+        };
+
+        try {
+            const response = await rp(options);
+            for (const userInfo of response) {
+                const permissions = userInfo.permissions;
+                let maxPermission = "pull";
+                if (permissions.admin === true) {
+                    maxPermission = "admin";
+                } else if (permissions.push === true) {
+                    maxPermission = "push";
+                }
+
+                collaborators.push({id: userInfo.login, permission: maxPermission});
+            }
+        } catch (error) {
+            Log.error(`GithubActions::listCollaborators(..) - ERROR: ${error}`);
+        }
+
+        Log.trace(`GithubActions::listCollaborators(${repoId}) - complete; collaborators: ${collaborators}`);
+        return collaborators;
+    }
+
     public async simulateWebookComment(projectName: string, sha: string, message: string): Promise<boolean> {
         try {
             if (typeof projectName === "undefined" || projectName === null) {
@@ -2073,4 +2160,13 @@ export class TestGitHubActions implements IGitHubActions {
         return;
     }
 
+    public async addCollaborators(repoId: string, userIds: string[], permissionLevel: string): Promise<boolean> {
+        // TODO: Add simulation of this
+        return true;
+    }
+
+    public async listCollaborators(repoId: string): Promise<Array<{id: string, permission: string}>> {
+        // TODO: Add simulation of this
+        return [];
+    }
 }

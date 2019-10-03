@@ -1,6 +1,6 @@
 import {AutoTestResult} from "../../../common/types/AutoTestTypes";
 import {AutoTestConfig} from "../../../common/types/ContainerTypes";
-import {AssignmentGrade, AssignmentInfo, AssignmentRepositoryInfo} from "../../../common/types/CS340Types";
+import {AssignmentGrade, AssignmentInfo} from "../../../common/types/CS340Types";
 
 /**
  * These types are the storage-specific types used by the backend.
@@ -94,12 +94,9 @@ export interface Deliverable {
     rubric: any; // captures rubric-specific definitions
     // custom: any; // {}; not used by the default implementation, but useful for extension (e.g., schemas)
     custom: {
-        rubric?: any, // CS340REST
-        assignment?: AssignmentInfo // AssignmentController
-        // courseWeight?: any, // AssignmentController // TODO: make into assignment.courseWeight
-        // seedRepoURL?: any, // RubricController // TODO: make into rubric.seedRepoURL
-        // seedRepoPath?: any, // RubricController // TODO: make into rubric.seedRepoPath
-        // mainFilePath?: any // AssignmentController // TODO: make into assignment.mainFilePath
+        rubric?: any; // CS340REST
+        assignment?: AssignmentInfo; // AssignmentController
+        scheduled?: boolean;
     };
 
     lateAutoTest: boolean; // whether the deliv can be executed after the deadline
@@ -166,8 +163,6 @@ export interface Repository {
         // assignmentId?: any, // AssignmentController // TODO: make into assignment.id
         // assignedTeams?: any, // AssignmentController // TODO: make into assignment.assignedTeams
 
-        assignmentInfo?: AssignmentRepositoryInfo,
-
         d0enabled?: boolean, // SDMM // TODO: make sdmm.d0enabled
         d1enabled?: boolean, // SDMM // TODO: make sdmm.d1enabled
         d2enabled?: boolean, // SDMM // TODO: make sdmm.d2enabled
@@ -185,6 +180,7 @@ export interface Course {
     defaultDeliverableId: string | null; // Deliverable.id foreign key
     custom: {
         status?: string
+        finalGradesReleased?: boolean
     };
 }
 
