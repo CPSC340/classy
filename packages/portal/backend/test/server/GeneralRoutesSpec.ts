@@ -6,12 +6,12 @@ import * as request from "supertest";
 
 import Config, {ConfigKey} from "../../../../common/Config";
 import Log from "../../../../common/Log";
+
+import {Test} from "../../../../common/TestHarness";
 import {ConfigTransportPayload, Payload, TeamFormationTransport} from "../../../../common/types/PortalTypes";
 import {DatabaseController} from "../../src/controllers/DatabaseController";
 import {RepositoryController} from "../../src/controllers/RepositoryController";
 import BackendServer from "../../src/server/BackendServer";
-
-import {Test} from "../../../../common/TestHarness";
 
 describe('General Routes', function() {
 
@@ -29,6 +29,7 @@ describe('General Routes', function() {
         await Test.prepareAll();
 
         // add files for getResource
+        // NOTE: if this fails in local testing, ensure your HOST_DIR and PERSIST_DIR are set appropriately
         const pDir = Config.getInstance().getProp(ConfigKey.persistDir);
         fs.ensureDirSync(pDir);
 
@@ -66,14 +67,6 @@ describe('General Routes', function() {
         Log.test('GeneralRoutes::after - start');
         Test.suiteAfter('General Routes');
         return server.stop();
-    });
-
-    beforeEach(function() {
-        Test.testAfter("GeneralRoutesSpec", this);
-    });
-
-    afterEach(function() {
-        Test.testAfter("GeneralRoutesSpec", this);
     });
 
     it('Should be able to get config details', async function() {
@@ -565,7 +558,7 @@ describe('General Routes', function() {
         expect(response.status).to.equal(400);
         expect(body.success).to.be.undefined;
         expect(body.failure).to.not.be.undefined;
-        expect(body.failure.message).to.equal('User is already on a team for this deliverable ( user1ID is on t_d0_user1CSID_user2CSID ).');
+        expect(body.failure.message).to.include('User is already on a team for this deliverable');
 
         try {
             Log.test('Making request');
@@ -683,9 +676,9 @@ describe('General Routes', function() {
 
         // create a team, but don't release it
         const deliv = await dc.getDeliverable(Test.DELIVIDPROJ);
-        const team = await dc.getTeam('t_project_user1CSID_user2CSID');
+        const team = await dc.getTeam('t_project_' + Test.USER1.csId + '_' + Test.USER2.csId);
         const rc = new RepositoryController();
-        const repo = await rc.createRepository('t_project_user1CSID_user2CSID', deliv, [team], {});
+        const repo = await rc.createRepository('t_project_' + Test.USER1.csId + '_' + Test.USER2.csId, deliv, [team], {});
 
         ex = null;
         try {

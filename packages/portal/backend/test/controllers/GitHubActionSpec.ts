@@ -43,7 +43,6 @@ describe("GitHubActions", () => {
     });
 
     beforeEach(function() {
-        Log.test('GitHubActionSpec::BeforeEach - "' + (this as any).currentTest.title + '"');
         gh.setPageSize(2); // force a small page size for testing
 
         const exec = Test.runSlowTest();
@@ -57,7 +56,6 @@ describe("GitHubActions", () => {
     });
 
     afterEach(function() {
-        Log.test('AfterTest: "' + (this as any).currentTest.title + '"');
         gh.setPageSize(100);
     });
 
@@ -266,7 +264,7 @@ describe("GitHubActions", () => {
         expect(val.githubTeamNumber).to.be.an('number');
         expect(val.githubTeamNumber > 0).to.be.true;
 
-        const addMembers = await gh.addMembersToTeam(val.teamName, val.githubTeamNumber,
+        const addMembers = await gh.addMembersToTeam(val.teamName,
             [Test.GITHUB1.github, Test.GITHUB2.github]);
         expect(addMembers.teamName).to.equal(TEAMNAME); // not a strong test
         Log.test("Members added");
@@ -398,7 +396,7 @@ describe("GitHubActions", () => {
         const targetUrl = Config.getInstance().getProp(ConfigKey.githubHost) + '/' +
             Config.getInstance().getProp(ConfigKey.org) + '/' + REPONAME;
         // keep a random repo public here so that all Github instances can work with cloning this:
-        const importUrl = Config.getInstance().getProp(ConfigKey.githubHost) + '/classytest/TESTING_SAMPLE_REPO';
+        const importUrl = Config.getInstance().getProp(ConfigKey.githubHost) + '/classytest/' + Test.REPONAMEREAL_TESTINGSAMPLE;
 
         const output = await gh.importRepoFS(importUrl, targetUrl);
         expect(output).to.be.true;
@@ -534,7 +532,7 @@ describe("GitHubActions", () => {
         }
 
         try {
-            await gh.addMembersToTeam('INVALIDTEAMNAME', -1, ['INVALIDPERSONNAME']);
+            await gh.addMembersToTeam('INVALIDTEAMNAME', ['INVALIDPERSONNAME']);
         } catch (err) {
             // expected
         }
@@ -576,7 +574,7 @@ describe("GitHubActions", () => {
         expect(githubTeam.githubTeamNumber > 0).to.be.true;
 
         // Expects adding members to work
-        const addMembers = await gh.addMembersToTeam(githubTeam.teamName, githubTeam.githubTeamNumber,
+        const addMembers = await gh.addMembersToTeam(githubTeam.teamName,
             [Test.GITHUB1.github, Test.GITHUB2.github]);
         expect(addMembers).to.not.be.null;
         const teamAdd = await gh.addTeamToRepo(githubTeam.githubTeamNumber, REPONAME, 'push');
@@ -610,7 +608,7 @@ describe("GitHubActions", () => {
 
     // this test wasn't failing for the right reasons and was disabled until we can figure out what is going on
     // it("Should not be able to bulk edit permissions to admins", async function() {
-    //     const githubTeam = await gh.createTeam(TEAMNAME, 'push');
+    //     const githubTeam = await gh.teamCreate(TEAMNAME, 'push');
     //     expect(githubTeam.teamName).to.be.equal(TEAMNAME);
     //     expect(githubTeam.githubTeamNumber).to.be.an('number');
     //     expect(githubTeam.githubTeamNumber > 0).to.be.true;
@@ -696,19 +694,19 @@ describe("GitHubActions", () => {
     }).timeout(TIMEOUT);
 
     it("Should be possible to simulate a webhook.", async function() {
-        let worked = await gh.simulateWebookComment(Test.REPONAMEREAL2, "SHA", "message");
+        let worked = await gh.simulateWebookComment(Test.REPONAMEREAL_POSTTEST, "SHA", "message");
         expect(worked).to.be.false; // SHA is not right
 
         let ex = null;
         try {
             let msg = "message";
-            worked = await gh.simulateWebookComment(Test.REPONAMEREAL2, "c35a0e5968338a9757813b58368f36ddd64b063e", msg);
+            worked = await gh.simulateWebookComment(Test.REPONAMEREAL_POSTTEST, "c35a0e5968338a9757813b58368f36ddd64b063e", msg);
 
             for (let i = 0; i < 10; i++) {
                 msg = msg + msg; // make a long message
             }
             msg = msg + '\n' + msg;
-            worked = await gh.simulateWebookComment(Test.REPONAMEREAL2, "c35a0e5968338a9757813b58368f36ddd64b063e", msg);
+            worked = await gh.simulateWebookComment(Test.REPONAMEREAL_POSTTEST, "c35a0e5968338a9757813b58368f36ddd64b063e", msg);
 
             // NOTE: worked not checked because githubWebhook needs to be active for this to work
             // expect(worked).to.be.true;
@@ -730,7 +728,7 @@ describe("GitHubActions", () => {
     it("Should be possible to make a comment.", async function() {
         const githubAPI = Config.getInstance().getProp(ConfigKey.githubAPI);
         let msg = "message";
-        let url = githubAPI + '/repos/classytest/' + Test.REPONAMEREAL2 + '/commits/INVALIDSHA/comments';
+        let url = githubAPI + '/repos/classytest/' + Test.REPONAMEREAL_POSTTEST + '/commits/INVALIDSHA/comments';
         let worked = await gh.makeComment(url, msg);
         expect(worked).to.be.false; // false because SHA is invalid
 
@@ -739,7 +737,7 @@ describe("GitHubActions", () => {
         }
         msg = msg + '\n' + msg;
 
-        url = githubAPI + "/repos/classytest/" + Test.REPONAMEREAL2 +
+        url = githubAPI + "/repos/classytest/" + Test.REPONAMEREAL_POSTTEST +
             "/commits/c35a0e5968338a9757813b58368f36ddd64b063e/comments";
         worked = await gh.makeComment(url, msg);
         expect(worked).to.be.true; // should have worked
@@ -774,8 +772,8 @@ describe("GitHubActions", () => {
         Log.test("listed members: " + JSON.stringify(val));
         expect(val).to.be.an('array');
         expect(val.length).to.equal(2);
-        expect(val[0]).to.equal(Test.GITHUB1.github);
-        expect(val[1]).to.equal(Test.GITHUB2.github);
+        expect(val).to.include(Test.GITHUB1.github);
+        expect(val).to.include(Test.GITHUB2.github);
     }).timeout(TIMEOUT);
 
     it("Clear stale repos and teams.", async function() {

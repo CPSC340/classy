@@ -2,19 +2,27 @@ import * as moment from "moment";
 import {OnsButtonElement} from "onsenui";
 
 import Log from "../../../../../common/Log";
+
+import {ClusteredResult} from "../../../../../common/types/ContainerTypes";
 import {
     AutoTestDashboardPayload,
     AutoTestDashboardTransport,
     DeliverableTransport,
     RepositoryTransport
 } from "../../../../../common/types/PortalTypes";
-import {SortableTable, TableCell, TableHeader} from "../util/SortableTable";
-
+import {DashboardTable} from "../util/DashboardTable";
+import {TableCell, TableHeader} from "../util/SortableTable";
 import {UI} from "../util/UI";
 import {AdminDeliverablesTab} from "./AdminDeliverablesTab";
 import {AdminPage} from "./AdminPage";
 import {AdminResultsTab} from "./AdminResultsTab";
 import {AdminView} from "./AdminView";
+
+export interface DetailRow {
+    name: string;
+    state: string;
+    colour: string;
+}
 
 export class AdminDashboardTab extends AdminPage {
 
@@ -162,7 +170,7 @@ export class AdminDashboardTab extends AdminPage {
             }
         ];
 
-        const st = new SortableTable(headers, '#dashboardListTable');
+        const st = new DashboardTable(headers, '#dashboardListTable');
 
         // this loop couldn't possibly be less efficient
         for (const result of results) {
@@ -194,12 +202,12 @@ export class AdminDashboardTab extends AdminPage {
                     html:  '<a style="cursor: pointer; cursor: hand;" target="_blank" href="' +
                            stdioViewerURL + '"><ons-icon icon="ion-ios-help-outline"</ons-icon></a>'
                 },
-                {value: result.repoId, html: '<a href="' + result.repoURL + '">' + result.repoId + '</a>'},
+                {value: result.repoId, html: '<a class="selectable" href="' + result.repoURL + '">' + result.repoId + '</a>'},
                 {value: result.delivId, html: result.delivId},
                 {value: result.scoreOverall, html: result.scoreOverall + ''},
                 {value: result.scoreTests, html: result.scoreTests + ''},
                 {value: result.scoreCover, html: result.scoreCover + ''},
-                {value: ts, html: '<a href="' + result.commitURL + '">' + tsString + '</a>'},
+                {value: ts, html: '<a class="selectable" href="' + result.commitURL + '">' + tsString + '</a>'},
                 {value: '', html: dashRow}
             ];
 
@@ -228,12 +236,6 @@ export class AdminDashboardTab extends AdminPage {
         all = all.concat(passNames, failNames, skipNames, errorNames);
         all = all.sort();
 
-        interface DetailRow {
-            name: string;
-            state: string;
-            colour: string;
-        }
-
         const annotated: DetailRow[] = [];
         for (const name of all) {
             let state = 'unknown';
@@ -256,14 +258,44 @@ export class AdminDashboardTab extends AdminPage {
             annotated.push({name: name, state: state, colour: colour});
         }
 
-        let str = '<span><table style="height: 20px;">';
-        str += '<tr>';
-        str += '<td style="width: 2em; text-align: center;">' + all.length + '</td>';
+        let str: string = '<div class="histogramcontainer">';
+        str += this.generateTable(annotated);
+        if (row.hasOwnProperty('cluster')) {
+            str += this.generateClusteredTable(annotated, row.delivId, row.cluster);
+        }
+        str += "</div>";
+        return str;
+    }
+
+    private generateTable(annotated: DetailRow[]): string {
+        let str = '<span class="normalhistogram"><table style="height: 20px;">';
+        str += '<tr class="selectable">';
+        // underscores for easier searching
+        str += '<td class="selectable" style="width: 2em; text-align: center;">_' + annotated.length + '_</td>';
         for (const a of annotated) {
             str += '<td class="dashResultCell" style="width: 5px; height: 20px; background: ' + a.colour + '" title="' + a.name + '"></td>';
         }
-
         str += '</tr>';
+        str += '</table></span>';
+        return str;
+    }
+
+    private generateClusteredTable(annotated: DetailRow[], delivId: string, clusteredResult: ClusteredResult): string {
+        const cellMap: {[key: string]: string} = {};
+        for (const cell of annotated) {
+            const c = cell.colour;
+            const n = cell.name;
+            cellMap[cell.name] = `<td class="dashResultCell" style="width: 5px; height: 20px; background: ${c}" title="${n}"></td>`;
+        }
+        let str = '<span class="clusteredhistogram hidden"><table style="height: 20px;">';
+        for (const cluster of Object.keys(clusteredResult)) {
+            str += '<tr>';
+            str += '<td style="width: 2em; text-align: center;">' + cluster + '</td>';
+            for (const test of clusteredResult[cluster].allNames) {
+                str += cellMap[test];
+            }
+            str += '</tr>';
+        }
         str += '</table></span>';
         return str;
     }

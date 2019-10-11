@@ -56,7 +56,7 @@ describe("GitHubController", () => {
         await dbc.writeTeam(t1);
         const t2 = await Test.createTeam(Test.TEAMNAME2, Test.DELIVID1, [Test.GITHUB1.id, Test.GITHUB2.id]);
         await dbc.writeTeam(t2);
-        // const t3 = await Test.createTeam(Test.TEAMNAME3, Test.DELIVID2, [Test.BOTNAME01, Test.USERNAMEGITHUB2]);
+        // const t3 = await Test.teamCreate(Test.TEAMNAME3, Test.DELIVID2, [Test.BOTNAME01, Test.USERNAMEGITHUB2]);
         // await dbc.writeTeam(t3);
 
         const dc = new DeliverablesController();
@@ -75,10 +75,6 @@ describe("GitHubController", () => {
     });
 
     beforeEach(function() {
-        Log.test('GitHubController::BeforeEach - ***');
-        Log.test('GitHubController::BeforeEach - "' + (this as any).currentTest.title + '"');
-        Log.test('GitHubController::BeforeEach - ***');
-
         const exec = Test.runSlowTest();
         if (exec === true) {
             Log.test("GitHubController::BeforeEach() - running in CI; not skipping");
@@ -87,12 +83,6 @@ describe("GitHubController", () => {
             Log.test("GitHubController::BeforeEach() - skipping (not CI)");
             this.skip();
         }
-    });
-
-    afterEach(function() {
-        Log.test('GitHubController::AfterEach - ***');
-        Log.test('GitHubController::AfterEach - "' + (this as any).currentTest.title + '"');
-        Log.test('GitHubController::AfterEach - ***');
     });
 
     it("Should be able to clear out prior result", async function() {
@@ -132,15 +122,14 @@ describe("GitHubController", () => {
     });
 
     it("Should be able to provision a repo.", async function() {
-        const githubHost  = Config.getInstance().getProp(ConfigKey.githubHost);
+        const githubHost = Config.getInstance().getProp(ConfigKey.githubHost);
         const repos = await new RepositoryController().getAllRepos();
         expect(repos.length).to.be.greaterThan(0);
 
         const teams = await new TeamController().getAllTeams();
         expect(teams.length).to.be.greaterThan(0);
 
-        // const webhook = 'https://devnull.cs.ubc.ca/classyWebhook';
-        const importUrl = githubHost + '/classytest/TESTING_SAMPLE_REPO';
+        const importUrl = githubHost + '/classytest/' + Test.REPONAMEREAL_TESTINGSAMPLE;
         const provisioned = await gc.provisionRepository(repos[0].id, teams, importUrl);
         expect(provisioned).to.be.true;
     }).timeout(Test.TIMEOUTLONG);
@@ -152,7 +141,6 @@ describe("GitHubController", () => {
         const teams = await new TeamController().getAllTeams();
         expect(teams.length).to.be.greaterThan(0);
 
-        // const webhook = 'https://devnull.cs.ubc.ca/classyWebhook';
         const importUrl = 'https://github.com/SECapstone/bootstrap';
         let res = null;
         let ex = null;
@@ -320,18 +308,19 @@ describe("GitHubController", () => {
     }).timeout(Test.TIMEOUT);
 
     // TODO: actually write tests for the PR feature
-    xit("Should fail to create a pull request.", async function() {
-        let res = null;
-        let ex = null;
-        try {
-            // not implemented yet, should fail right away
-            const repos = await new RepositoryController().getAllRepos();
-            res = await gc.createPullRequest(repos[0], 'patch');
-        } catch (err) {
-            ex = err;
-        }
-        expect(res).to.be.null;
-        expect(ex).to.not.be.null;
-    }).timeout(Test.TIMEOUT);
+    // xit("Should fail to create a pull request.", async function() {
+    //     let res = null;
+    //     let ex = null;
+    //     try {
+    //         // patchtool has not been integrated with tests yet,
+    //         // so should fail to contact patchtool and return false
+    //         const repos = await new RepositoryController().getAllRepos();
+    //         res = await gc.createPullRequest(repos[0], 'patch');
+    //     } catch (err) {
+    //         ex = err;
+    //     }
+    //     expect(res).to.be.false;
+    //     expect(ex).to.be.null;
+    // }).timeout(Test.TIMEOUT);
 
 });
