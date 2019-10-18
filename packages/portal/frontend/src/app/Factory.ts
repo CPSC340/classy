@@ -125,6 +125,13 @@ export class Factory {
                     plug = await require('./custom/DefaultAdminView');
                 }
 
+                if (this.name.toLowerCase() === 'mds' || this.name.toLowerCase() === 'cs340') {
+                    // disable the rest of the tabs
+                    tabs.teams = false; // no teams
+                    tabs.results = false; // no results
+                    tabs.dashboard = false; // no dashboard
+                }
+
                 Log.trace("Factory::getAdminView() - view loaded");
 
                 // if this fails an error will be raised and the default view will be provided in the catch below
@@ -135,6 +142,7 @@ export class Factory {
             }
         } catch (err) {
             Log.info("Factory::getAdminView() - custom admin view not provided; using default AdminView");
+            Log.error(`Factory::getAdminView(..) - ${err}`);
             this.adminView = new AdminView(backendUrl, tabs);
         }
 

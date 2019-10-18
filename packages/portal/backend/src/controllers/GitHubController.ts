@@ -8,7 +8,6 @@ import {DatabaseController} from "./DatabaseController";
 import {IGitHubActions} from "./GitHubActions";
 import {TeamController} from "./TeamController";
 
-import * as rp from "request-promise-native";
 import {AssignmentController} from "../custom/AssignmentController";
 
 export interface IGitHubController {
@@ -247,7 +246,7 @@ export class GitHubController implements IGitHubController {
                         }
 
                         Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - add members to GitHub team: " + team.id);
-                        const addMembers = await this.gha.addMembersToTeam(teamValue.teamName, teamValue.githubTeamNumber, team.personIds);
+                        const addMembers = await this.gha.addMembersToTeam(teamValue.teamName, team.personIds);
                         Log.info("GitHubController::createRepositoryWithPath( " + repoName + " ) - addMembers: " + addMembers.teamName);
 
                     }
