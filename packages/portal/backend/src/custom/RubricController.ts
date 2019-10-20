@@ -7,9 +7,9 @@ import {
     QuestionRubric,
     SubQuestionRubric
 } from "../../../../common/types/CS340Types";
-import {Deliverable} from "../Types";
 import {DatabaseController} from "../controllers/DatabaseController";
 import {GitHubActions, IGitHubActions} from "../controllers/GitHubActions";
+import {Deliverable} from "../Types";
 
 // tslint:disable-next-line
 const tmp = require('tmp-promise');
