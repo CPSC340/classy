@@ -25,6 +25,7 @@ export class AssignmentController {
     private cc: AdminController = new AdminController(this.ghc);
 
     public static COLLABORATOR_FLAG: boolean = true;
+    private static AGGRESSIVE_TAKEOVER: boolean = true;
 
     public async createAllRepositories(delivId: string): Promise<boolean> {
         Log.info(`AssignmentController::createAllRepositories(${delivId}) - start`);
@@ -231,19 +232,34 @@ export class AssignmentController {
                 const start = Date.now();
                 Log.info(`AssignmentController::provisionRepos(..) ***** START *****; repo: ${repo.id}`);
                 if (repo.URL === null) {
-                    const teams: Team[] = [];
-                    for (const teamId of repo.teamIds) {
-                        teams.push(await this.db.getTeam(teamId));
+                    let toProvision: boolean = true;
+                    let success: boolean = false;
+                    if (AssignmentController.AGGRESSIVE_TAKEOVER === true) {
+                        // this is an aggressive takeover
+                        const repoExists = await this.gha.repoExists(repo.id);
+                        if (repoExists === true) {
+                            // this repo already exists, so don't bother provisioning
+                            Log.warn(`AssignmentController::performProvision(..) - repo: ${repo.id} already exists, recording...`);
+                            toProvision = false;
+                            success = true;
+                        }
                     }
-                    Log.info(`AssignmentController::performProvision(..) - about to provision: ${repo.id}`);
 
-                    let success: boolean;
-                    if (importPath !== "") {
-                        success = await this.ghc.createRepositoryWithPath(repo.id, teams, importURL, importPath);
-                    } else {
-                        success = await this.ghc.provisionRepository(repo.id, teams, importURL);
+
+                    if (toProvision === true) {
+                        const teams: Team[] = [];
+                        for (const teamId of repo.teamIds) {
+                            teams.push(await this.db.getTeam(teamId));
+                        }
+                        Log.info(`AssignmentController::performProvision(..) - about to provision: ${repo.id}`);
+
+                        if (importPath !== "") {
+                            success = await this.ghc.createRepositoryWithPath(repo.id, teams, importURL, importPath);
+                        } else {
+                            success = await this.ghc.provisionRepository(repo.id, teams, importURL);
+                        }
+                        Log.info(`AssignmentController::performProvision(..) - provisioned: ${repo.id}; success: ${success}`);
                     }
-                    Log.info(`AssignmentController::performProvision(..) - provisioned: ${repo.id}; success: ${success}`);
 
                     if (success === true) {
                         repo.URL = config.getProp(ConfigKey.githubHost) + "/" + config.getProp(ConfigKey.org) + "/" + repo.id;
