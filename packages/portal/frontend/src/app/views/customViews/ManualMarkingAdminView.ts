@@ -529,7 +529,7 @@ export class ManualMarkingAdminView extends AdminView {
                     Log.info(`${this.loggingName}::provisionAllRepositories(..) - released ${repoId}` +
                     `; took ${Util.took(start)}`);
 
-                    UI.showSuccessToast(`Repo released: ${repoId} (${i + 1} of ${selected.length})`,
+                    UI.showSuccessToast(`Repo provisioned: ${repoId} (${i + 1} of ${selected.length})`,
                         {timeout: 1000, animation: `none`});
                 }).catch((err) => {
                             Log.error(`${that.loggingName}::provisionAllRepositories(..) - provisioning error for: ${repoId}` +
