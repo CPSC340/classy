@@ -677,6 +677,7 @@ export class ManualMarkingAdminView extends AdminView {
         }).sort();
 
         delivSelect.innerHTML = '';
+        delivSelect.add(new Option("--N/A--", null, true, false));
         delivIds.forEach((delivId) => {
            let value = delivId;
            if (delivId.startsWith('--')) {
@@ -693,7 +694,6 @@ export class ManualMarkingAdminView extends AdminView {
             if (delivId.startsWith("--")) {
                 return;
             } else {
-                Log.info(`-- We got here! --`);
                 // get the json data
                 const options: any = AdminView.getOptions();
 
@@ -704,9 +704,10 @@ export class ManualMarkingAdminView extends AdminView {
                     const json = await response.json();
                     Log.info(`-- Response: ${json}`);
 
-                    const dataUri = `data:application/json;charset=utf-8, ${json}`;
+                    const data = new Blob([json], {type: 'text/plain'});
+                    const dataBlock = window.URL.createObjectURL(data);
 
-                    gradeDownloadButton.href = dataUri;
+                    gradeDownloadButton.href = dataBlock;
                     Log.info(`-- ZOOM --`);
                 } else {
                     Log.error(`ManualMarkingAdminView::generateGradeExport(..) - Error: Response code is: ${response.status}`);
