@@ -187,6 +187,10 @@ export class AdminMarkingTab extends AdminPage {
             // ASSUMPTION: If students are on a team for a deliverable, they should all have the same grade
             const studentId: string = team.people[0];
             const studentTransport = studentIdMap.get(studentId);
+            if (studentTransport === undefined) {
+                Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Error: Unable to find student mapping`);
+                continue;
+            }
             if (studentTransport === null) {
                 Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Unable to find student object`);
                 newRow.push({value: `N/A`, html: `N/A`});
