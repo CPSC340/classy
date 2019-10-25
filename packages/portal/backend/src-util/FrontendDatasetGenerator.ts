@@ -1,4 +1,5 @@
 import Log from "../../../common/Log";
+import {Test} from "../../../common/TestHarness";
 import {AdminController} from "../src/controllers/AdminController";
 /* istanbul ignore file */
 import {DatabaseController} from "../src/controllers/DatabaseController";
@@ -7,8 +8,10 @@ import {GitHubController} from "../src/controllers/GitHubController";
 import {TeamController} from "../src/controllers/TeamController";
 import {Factory} from "../src/Factory";
 import {PersonKind} from "../src/Types";
-import {Test} from "../test/TestHarness";
 
+/**
+ * This sample file shows how to create a bunch of fake data for course testing.
+ */
 export class FrontendDatasetGenerator {
 
     private dc: DatabaseController = null;
@@ -24,7 +27,7 @@ export class FrontendDatasetGenerator {
         await this.createDeliverables();
         await this.createPeople();
         await this.createTeams();
-        // await this.createRepositories();
+        await this.createRepositories();
         await this.createGrades();
         await this.createResults();
         Log.info("FrontendDatasetGenerator::create() - done");
@@ -81,6 +84,7 @@ export class FrontendDatasetGenerator {
 
     private async createTeams(): Promise<void> {
         Log.info("FrontendDatasetGenerator::createTeams() - start");
+        const cc = await Factory.getCourseController(this.ghc);
 
         const tc = new TeamController();
         const delivs = await this.dc.getDeliverables();
@@ -111,7 +115,8 @@ export class FrontendDatasetGenerator {
                 }
 
                 if (p1Team === null && p2Team === null) {
-                    const names = await Factory.getCourseController(this.ghc).computeNames(deliv, [p1, p2]);
+
+                    const names = await cc.computeNames(deliv, [p1, p2]);
                     // both members not on a team
                     const team = Test.getTeam(names.teamName, deliv.id, [p1.id, p2.id]);
                     Log.info("FrontendDatasetGenerator::createTeams() - creating team: " + team.id);
@@ -158,12 +163,12 @@ export class FrontendDatasetGenerator {
 
         // these will be created by provision
 
-        // const teams = await this.dc.getTeams();
-        // for (const team of teams) {
-        //     const repoName = team.id;
-        //     const repo = Test.getRepository(repoName, Test.DELIVID0, team.id);
-        //     await this.dc.writeRepository(repo);
-        // }
+        const teams = await this.dc.getTeams();
+        for (const team of teams) {
+            const repoName = team.id;
+            const repo = Test.getRepository(repoName, Test.DELIVID0, team.id);
+            await this.dc.writeRepository(repo);
+        }
     }
 
     private async createResults(): Promise<void> {

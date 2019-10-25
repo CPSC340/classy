@@ -6,6 +6,8 @@ import * as request from "supertest";
 
 import Config, {ConfigKey} from "../../../../common/Config";
 import Log from "../../../../common/Log";
+
+import {Test} from "../../../../common/TestHarness";
 import {
     AutoTestAuthPayload,
     AutoTestConfigPayload,
@@ -16,8 +18,6 @@ import {
 import {DatabaseController} from "../../src/controllers/DatabaseController";
 
 import BackendServer from "../../src/server/BackendServer";
-
-import {Test} from "../TestHarness";
 
 // This seems silly, but just makes sure GlobalSpec runs first.
 // It should be at the top of every test file.
@@ -231,7 +231,7 @@ describe('AutoTest Routes', function() {
 
         let response = null;
         let body: AutoTestAuthPayload;
-        const url = '/portal/at/isStaff/' + Test.ADMIN1.github;
+        const url = '/portal/at/isStaff/' + Test.ADMINSTAFF1.github;
         try {
             response = await request(app).get(url).set('token', Config.getInstance().getProp(ConfigKey.autotestSecret));
             body = response.body;
@@ -264,7 +264,7 @@ describe('AutoTest Routes', function() {
         expect(body.success.isAdmin).to.not.be.undefined;
         expect(body.success.isStaff).to.be.false;
         expect(body.success.isAdmin).to.be.false;
-    });
+    }).timeout(Test.TIMEOUT);
 
     it('Should reject an unauthorized personId request', async function() {
 
@@ -525,6 +525,7 @@ describe('AutoTest Routes', function() {
             let res: any;
 
             try {
+                // Possibly NOT working as REALUSER1 is actually a fake user but test is still passing
                 res = await request(app).post(url).set('user', Test.REALUSER1.github).send(body);
             } catch (err) {
                 res = err;

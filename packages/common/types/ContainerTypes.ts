@@ -2,6 +2,8 @@
  * The result of the grading container after it has run. Set by the Grader
  * service.
  */
+import {AutoTestConfigTransport} from "./PortalTypes";
+
 export enum ContainerState {
     SUCCESS = "SUCCESS",
     FAIL = "FAIL",
@@ -15,7 +17,7 @@ export enum ContainerState {
 export interface ContainerInput {
     delivId: string; // Specifies what delivId the Grader should execute against.
     target: CommitTarget; // Details about the push event that led to this request.
-    containerConfig: AutoTestConfig; // Container configuration details.
+    containerConfig: AutoTestConfigTransport; // Container configuration details.
 }
 
 /**
@@ -104,6 +106,12 @@ export interface GradeReport {
     // Use attachments instead for large bits of data you wish
     // to persist.
     custom: {};
+
+    cluster?: ClusteredResult;
+
+    studentTime?: number;
+    publicTime?: number;
+    privateTime?: number;
 }
 
 /**
@@ -119,4 +127,16 @@ export interface Attachment {
     visibleToStudent: boolean;
     visibleToPublic: boolean; // almost always false
     content_type: string;
+}
+
+export interface SingleClusterResult {
+    allNames: string[];
+    passNames: string[];
+    failNames: string[];
+    skipNames: string[];
+    errorNames: string[];
+}
+
+export interface ClusteredResult {
+    [cluster: string]: SingleClusterResult;
 }

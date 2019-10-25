@@ -6,6 +6,7 @@
  * All fields should be primitives.
  */
 import {AutoTestResult} from "./AutoTestTypes";
+import {ClusteredResult} from "./ContainerTypes";
 
 export interface FailurePayload {
     message: string;
@@ -19,6 +20,20 @@ export interface SuccessPayload {
 
 export interface Payload {
     success?: SuccessPayload | any; // only set if defined
+    failure?: FailurePayload; // only set if defined
+}
+
+// Introduced to produce Classlist Change data - helps with understanding future
+// manual/automatic repo provisioning after Classlist update
+export interface ClasslistChangesTransport {
+    updated: StudentTransport[];
+    created: StudentTransport[];
+    removed: StudentTransport[];
+    classlist: StudentTransport[];
+}
+
+export interface ClasslistChangesTransportPayload {
+    success?: ClasslistChangesTransport; // only set if defined
     failure?: FailurePayload; // only set if defined
 }
 
@@ -120,6 +135,8 @@ export interface TeamTransport {
     delivId: string;
     people: string[];
     URL: string | null;
+    // repoName: string | null;
+    // repoUrl: string | null;
 }
 
 export interface TeamFormationTransport {
@@ -193,7 +210,12 @@ export interface AutoTestConfigTransport {
     regressionDelivIds: string[];
 
     /**
+     * This field is a convenient place to add parameters to the UI that will be passed to
+     * AutoTest grading containers. This property is set in the AutoTest portion of the
+     * Deliverable UI.
+     *
      * A custom JSON object that will be passed to the container. Can be {}.
+     *
      */
     custom: object;
 
@@ -299,4 +321,17 @@ export interface AutoTestDashboardTransport extends AutoTestResultSummaryTranspo
     testFail: string[];
     testSkip: string[];
     testError: string[];
+    cluster?: ClusteredResult;
+}
+
+export interface ClasslistTransport {
+    SNUM: string;
+    FIRST: string;
+    LAST: string;
+    PREF: string;
+    ACCT: string;
+    CRS: string;
+    CWL: string;
+    SEC: string;
+    LAB: string;
 }

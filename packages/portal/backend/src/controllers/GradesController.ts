@@ -32,7 +32,7 @@ export class GradesController {
                 returnGrades.push(grade);
             } else {
                 if (grade !== null && person !== null) {
-                    Log.info("GradesController::getAllGrades() - not returning grade for: " + grade.personId + "; kind: " + person.kind);
+                    Log.trace("GradesController::getAllGrades() - not returning grade for: " + grade.personId + "; kind: " + person.kind);
                 } else {
                     Log.warn("GradesController::getAllGrades() - null; not returning grade: " +
                         JSON.stringify(grade) + "; person: " + JSON.stringify(person));
@@ -162,7 +162,14 @@ export class GradesController {
 
     public async saveGrade(grade: Grade): Promise<boolean> {
         Log.info("GradesController::saveGrade( ... ) - start");
-        // grade.score = Number(grade.score);
+
+        const existingGrade = await this.db.getGrade(grade.personId, grade.delivId);
+        if (existingGrade !== null) {
+            (grade.custom as any).previousGrade = existingGrade; // persist previous grade
+            if (grade.URL === null && existingGrade.URL !== null) {
+                grade.URL = existingGrade.URL; // restore the URL, if it exists on the previous but not on the update (e.g., for CSV upload)
+            }
+        }
         return await this.db.writeGrade(grade);
     }
 

@@ -94,9 +94,9 @@ export interface Deliverable {
     rubric: any; // captures rubric-specific definitions
     // custom: any; // {}; not used by the default implementation, but useful for extension (e.g., schemas)
     custom: {
-        rubric?: any, // CS340REST
-        assignment?: AssignmentInfo // AssignmentController
-        scheduled?: boolean, // TODO [Jonathan] Create type for this
+        rubric?: any; // CS340REST
+        assignment?: AssignmentInfo; // AssignmentController
+        scheduled?: boolean;
     };
 
     lateAutoTest: boolean; // whether the deliv can be executed after the deadline
@@ -125,6 +125,8 @@ export interface Team {
     URL: string | null; // null when not yet created
     githubId: number | null; // null when not yet created
     personIds: string[]; // Person.id[] - foreign key
+    // repoName: string | null;
+    // repoUrl: string | null;
 
     // githubStatus: string; // NONE | CREATED | LINKED
     custom: {
@@ -159,6 +161,10 @@ export interface Repository {
         githubCreated?: boolean,
         githubReleased?: boolean,
 
+        // status?: any, // AssignmentController // TODO: make into assignment.status
+        // assignmentId?: any, // AssignmentController // TODO: make into assignment.id
+        // assignedTeams?: any, // AssignmentController // TODO: make into assignment.assignedTeams
+
         d0enabled?: boolean, // SDMM // TODO: make sdmm.d0enabled
         d1enabled?: boolean, // SDMM // TODO: make sdmm.d1enabled
         d2enabled?: boolean, // SDMM // TODO: make sdmm.d2enabled
@@ -175,7 +181,7 @@ export interface Course {
     readonly id: string; // invariant; this is the name of the course
     defaultDeliverableId: string | null; // Deliverable.id foreign key
     custom: {
-        status?: string,
+        status?: string
         finalGradesReleased?: boolean
     };
 }

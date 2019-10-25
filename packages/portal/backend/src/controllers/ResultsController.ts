@@ -43,8 +43,8 @@ export class ResultsController {
      * @param {string} url
      * @returns {Result}
      */
-    public async getResultFromURL(url: string): Promise<Result | null> {
-        const result = await this.db.getResultFromURL(url);
+    public async getResultFromURL(url: string, delivId: string): Promise<Result | null> {
+        const result = await this.db.getResultFromURL(url, delivId);
         return result;
     }
 
@@ -55,9 +55,7 @@ export class ResultsController {
         const rc = new RepositoryController();
         const people = await rc.getPeopleForRepo(record.repoId);
 
-        (record as any).people = people; // don't know how to augment this record with people to keep the type system happy
-
-        const outcome = await DatabaseController.getInstance().writeResult(record as Result);
+        const outcome = await DatabaseController.getInstance().writeResult({...record, people});
         Log.trace("ResultsController::createResult(..) - result written");
         return outcome;
     }
