@@ -718,6 +718,8 @@ export default class CustomCourseRoutes implements IREST {
                     });
                 });
 
+                rubricGrades["feedback"] = grade.custom.assignmentGrade.feedback;
+
                 filteredGrades[grade.personId] = rubricGrades;
                 Log.info(`CS340Routes::retrieveStudentsGrades(..) - RubricGrade: ${JSON.stringify(rubricGrades)}`);
             });

@@ -702,13 +702,11 @@ export class ManualMarkingAdminView extends AdminView {
                 if (response.status === 200) {
                     Log.info(`ManualMarkingAdminView::generateGradeExport(..) - 200 received`);
                     const json = await response.json();
-                    Log.info(`-- Response: ${json}`);
 
                     const data = new Blob([json], {type: 'text/plain'});
                     const dataBlock = window.URL.createObjectURL(data);
 
                     gradeDownloadButton.href = dataBlock;
-                    Log.info(`-- ZOOM --`);
                 } else {
                     Log.error(`ManualMarkingAdminView::generateGradeExport(..) - Error: Response code is: ${response.status}`);
                 }
