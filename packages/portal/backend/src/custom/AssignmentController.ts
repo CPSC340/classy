@@ -4,13 +4,13 @@ import {AssignmentGrade} from "../../../../common/types/CS340Types";
 import {RepositoryTransport} from "../../../../common/types/PortalTypes";
 import {GradePayload} from "../../../../common/types/SDMMTypes";
 import Util from "../../../../common/Util";
-import {Deliverable, Person, Repository, Team} from "../Types";
 import {AdminController} from "../controllers/AdminController";
 import {DatabaseController} from "../controllers/DatabaseController";
 import {GitHubActions, IGitHubActions} from "../controllers/GitHubActions";
 import {GitHubController} from "../controllers/GitHubController";
 import {GradesController} from "../controllers/GradesController";
 import {RepositoryController} from "../controllers/RepositoryController";
+import {Deliverable, Person, Repository, Team} from "../Types";
 import {RubricController} from "./RubricController";
 import {ScheduleController} from "./ScheduleController";
 
