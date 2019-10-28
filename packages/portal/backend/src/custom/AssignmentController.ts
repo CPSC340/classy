@@ -245,7 +245,6 @@ export class AssignmentController {
                         }
                     }
 
-
                     if (toProvision === true) {
                         const teams: Team[] = [];
                         for (const teamId of repo.teamIds) {
@@ -257,6 +256,9 @@ export class AssignmentController {
                             success = await this.ghc.createRepositoryWithPath(repo.id, teams, importURL, importPath);
                         } else {
                             success = await this.ghc.provisionRepository(repo.id, teams, importURL);
+                        }
+                        if (success) {
+                            await this.addDefaultREADME(repo.id, teams);
                         }
                         Log.info(`AssignmentController::performProvision(..) - provisioned: ${repo.id}; success: ${success}`);
                     }
@@ -291,6 +293,59 @@ export class AssignmentController {
             provisionedRepositoryTransport.push(RepositoryController.repositoryToTransport(repo));
         }
         return provisionedRepositoryTransport;
+    }
+
+    public async addDefaultREADME(repoName: string, teams: Team[], course: string = "MDS"): Promise<boolean> {
+        Log.info(`AssignmentController::addDefaultREADME(${repoName},${teams},${course}) - start`);
+        const config = Config.getInstance();
+
+        switch (course) {
+            case "MDS": {
+                const repoURL = `${config.getProp(ConfigKey.githubHost)}/${config.getProp(ConfigKey.org)}/${repoName}`;
+                // const studentNames: string[] = teams.map((team) => {
+                //     return team.personIds;
+                // }).flat();
+                const students: Person[] = [];
+                const studentIds: string[][] = teams.map((team) => {
+                    return team.personIds;
+                });
+
+                // Log.info(`AssignmentController::addDefaultREADME(..) - `);
+                Log.info(`AssignmentController::addDefaultREADME(..) - StudentIds: ${studentIds.join(", ")}`);
+
+                studentIds.forEach((studentSet) => {
+                    const studentPromises: Array<Promise<Person>> = [];
+
+                    studentSet.forEach((studentId) => {
+                        studentPromises.push(this.db.getPerson(studentId));
+                    });
+
+                    Promise.all(studentPromises).then((resolvedStudents) => {
+                        resolvedStudents.forEach((student) => {
+                            students.push(student);
+                        });
+                    });
+                });
+                const studentNames: string = students.map((student) => {
+                    return student.fName;
+                }).join(", ");
+                const studentCWLs: string = students.map((student) => {
+                   return student.csId;
+                }).join(", ");
+                const fileContents = `# ${repoName}\n\n` +
+                    // `DSCI 512 lab1 for ${studentNames} (${studentCWLs})\n` +
+                    `## Submission Details\n\nPlease enter details of your submission here...\n\n` +
+                    `## Help us improve the labs\n\n` +
+                    `The MDS program is continually looking to improve our courses, including lab questions and content. ` +
+                    `The following optional questions will not affect your grade in any way nor will they be used for anything ` +
+                    `other than program improvement:\n\n1. Approximately how many hours did you spend working or thinking about this ` +
+                    `assignment (including lab time)?\n\n#Ans:\n\n2. Were there any questions that you particularly liked or disliked?\n` +
+                    `\n#Ans: [Questions you liked]\n\n#Ans: [Questions you disliked]\n\n`;
+                return await this.gha.writeFileToRepo(repoURL, "README.md", fileContents, false);
+            }
+        }
+
+        return true;
     }
 
     public async getFinalGradeStatus(): Promise<boolean> {
