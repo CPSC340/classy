@@ -324,6 +324,9 @@ export class AssignmentController {
                         resolvedStudents.forEach((student) => {
                             students.push(student);
                         });
+                    }).catch((err) => {
+                        Log.error("AssignmentController::addDefaultREADME(..) - ERROR: " + err);
+                        return false;
                     });
                 });
                 const studentNames: string = students.map((student) => {
