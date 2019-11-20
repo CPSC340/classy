@@ -237,6 +237,8 @@ export class AssignmentController {
                     if (AssignmentController.AGGRESSIVE_TAKEOVER === true) {
                         // this is an aggressive takeover
                         const repoExists = await this.gha.repoExists(repo.id);
+                        Log.info(`AssignmentController::preformProvision(..) - Aggressive Takeover; ` +
+                            `Checking if repo exists. Exists: ${repoExists}`);
                         if (repoExists === true) {
                             // this repo already exists, so don't bother provisioning
                             Log.warn(`AssignmentController::performProvision(..) - repo: ${repo.id} already exists, recording...`);
@@ -299,44 +301,11 @@ export class AssignmentController {
         Log.info(`AssignmentController::addDefaultREADME(${repoName},${teams},${course}) - start`);
         const config = Config.getInstance();
 
-        switch (course) {
-            case "MDS": {
+        switch (course.toLowerCase()) {
+            case "mds": {
                 const repoURL = `${config.getProp(ConfigKey.githubHost)}/${config.getProp(ConfigKey.org)}/${repoName}`;
-                // const studentNames: string[] = teams.map((team) => {
-                //     return team.personIds;
-                // }).flat();
-                const students: Person[] = [];
-                const studentIds: string[][] = teams.map((team) => {
-                    return team.personIds;
-                });
 
-                // Log.info(`AssignmentController::addDefaultREADME(..) - `);
-                Log.info(`AssignmentController::addDefaultREADME(..) - StudentIds: ${studentIds.join(", ")}`);
-
-                studentIds.forEach((studentSet) => {
-                    const studentPromises: Array<Promise<Person>> = [];
-
-                    studentSet.forEach((studentId) => {
-                        studentPromises.push(this.db.getPerson(studentId));
-                    });
-
-                    Promise.all(studentPromises).then((resolvedStudents) => {
-                        resolvedStudents.forEach((student) => {
-                            students.push(student);
-                        });
-                    }).catch((err) => {
-                        Log.error("AssignmentController::addDefaultREADME(..) - ERROR: " + err);
-                        return false;
-                    });
-                });
-                const studentNames: string = students.map((student) => {
-                    return student.fName;
-                }).join(", ");
-                const studentCWLs: string = students.map((student) => {
-                   return student.csId;
-                }).join(", ");
                 const fileContents = `# ${repoName}\n\n` +
-                    // `DSCI 512 lab1 for ${studentNames} (${studentCWLs})\n` +
                     `## Submission Details\n\nPlease enter details of your submission here...\n\n` +
                     `## Help us improve the labs\n\n` +
                     `The MDS program is continually looking to improve our courses, including lab questions and content. ` +
