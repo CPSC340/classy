@@ -479,12 +479,7 @@ export default class CustomCourseRoutes implements IREST {
 
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
-        if (!isValid.isStaff) {
-            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
-            res.send(401, {
-                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
-            });
-        } else {
+        if (isValid.isAdmin || isValid.isStaff) {
             const studentId: string = req.params.sid;
             const delivId: string = req.params.delivId;
 
@@ -503,9 +498,16 @@ export default class CustomCourseRoutes implements IREST {
                     return next();
                 }
             }
-            res.send(400, {error: `Improper usage; unable to find repository for student ${studentId} and` +
-                    `deliverable: ${delivId}`});
+            res.send(400, {
+                error: `Improper usage; unable to find repository for student ${studentId} and` +
+                    `deliverable: ${delivId}`
+            });
             return next();
+        } else {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
+            res.send(401, {
+                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
+            });
         }
     }
 
