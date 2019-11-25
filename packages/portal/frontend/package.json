@@ -37,10 +37,12 @@
         "ts-loader": "^6.0.0",
         "tslint": "^5.11.0",
         "typescript": "^3.5.1",
-        "webpack": "^4",
-        "webpack-cli": "^3"
+        "webpack": "^4"
     },
     "resolutions": {
         "**/event-stream": "^4.0.1"
+    },
+    "devDependencies": {
+        "webpack-cli": "^3.3.10"
     }
 }

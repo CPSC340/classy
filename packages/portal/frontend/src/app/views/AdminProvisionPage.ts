@@ -405,7 +405,7 @@ export class AdminProvisionPage extends AdminPage {
     private async releaseRepo(repoId: string): Promise<boolean> {
         Log.info("AdminProvisionPage::releaseRepo( " + repoId + " ) - start");
 
-        const url = this.remote + '/portal/admin/release/' + repoId;
+        const url = this.remote + '/portal/cs340/release/' + repoId;
         return await this.performAction(url);
     }
 

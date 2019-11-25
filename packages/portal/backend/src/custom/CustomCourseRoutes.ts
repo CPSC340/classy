@@ -18,6 +18,12 @@ import {AuditLabel, Deliverable, Grade, Person, Repository, Team} from "../Types
 import {AssignmentController} from "./AssignmentController";
 import {RubricController} from "./RubricController";
 import {ScheduleController} from "./ScheduleController";
+import {AdminController} from "../controllers/AdminController";
+import Util from "../../../../common/Util";
+import AdminRoutes from "../server/common/AdminRoutes";
+import {GitHubController} from "../controllers/GitHubController";
+import {GitHubActions} from "../controllers/GitHubActions";
+import {CourseController} from "../controllers/CourseController";
 
 export default class CustomCourseRoutes implements IREST {
 
@@ -40,6 +46,7 @@ export default class CustomCourseRoutes implements IREST {
         server.post("/portal/cs340/verifyAllScheduledTasks/", CustomCourseRoutes.verifyAllScheduledTasks);
 
         server.post("/portal/cs340/provision/:delivId/:repoId", CustomCourseRoutes.provisionOverride);
+        server.post('/portal/cs340/release/:repoId', CustomCourseRoutes.releaseOverride);
 
         server.get("/portal/cs340/getNextUngradedSameLab/:delivId/:sid", CustomCourseRoutes.getNextUngradedSameLab);
         server.get("/portal/cs340/getNextUngraded/:delivId/:sid", CustomCourseRoutes.getNextUngraded);
@@ -768,6 +775,71 @@ export default class CustomCourseRoutes implements IREST {
             res.send(400, {failure: {message: `Unable to provision repo: ${err.message}`}, shouldLogout: false});
             return next(false);
         }
+    }
+
+    /**
+     * A custom release handler to integrate into the provisioning page. Transparently acts like the standard
+     * release repo API, but does some Assignment handling, if needed.
+     * @param req
+     * @param res
+     * @param next
+     */
+    private static async releaseOverride(req: any, res: any, next: any) {
+        Log.info(`CS340Routes::releaseOverride(..) - start`);
+
+        const user = req.headers.user;
+        const token = req.headers.token;
+
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+        if (isValid.isStaff === false && isValid.isAdmin === false) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
+            res.send(401, {
+                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
+            });
+            return next();
+        }
+
+        let payload: Payload;
+        const repoId = req.params.repoId;
+
+        Log.info('CS340Routes::releaseOverride(..) - start; repoId: ' + repoId);
+        try {
+            const success = await CustomCourseRoutes.releaseRepository(user, repoId);
+            payload = {success: success};
+            res.send(200, payload);
+            return next(true);
+        } catch (err) {
+            Log.error(`CS340Routes:: Error - Unable to provision repo: ${err.message} `);
+            res.send(400, {failure: {message: `Unable to provision repo: ${err.message}`}, shouldLogout: false});
+            return next(false);
+        }
+    }
+
+    private static async releaseRepository(personId: string, repoId: string): Promise<RepositoryTransport[]> {
+        const ghc = new GitHubController(GitHubActions.getInstance());
+        const ac = new AdminController(ghc);
+
+        // TODO: if course is SDMM, always fail
+        const start = Date.now();
+        const rc = new RepositoryController();
+
+        const repo = await rc.getRepository(repoId);
+        Log.info("CS340Routes::performRelease( " + personId + ", " + repoId + " ) - repo: " + repo);
+        if (repo !== null) {
+            const dbc = DatabaseController.getInstance();
+            await dbc.writeAudit(AuditLabel.REPO_RELEASE, personId, {}, {}, {repoId: repoId});
+
+            const releaseSucceeded = await ac.performRelease([repo], true);
+            Log.info('CS340Routes::performRelease() - success; # results: ' + releaseSucceeded.length +
+                '; took: ' + Util.took(start));
+            return releaseSucceeded;
+
+        } else {
+            Log.error("CS340Routes::performRelease() - unknown repository: " + repoId);
+        }
+        // should never get here unless something goes wrong
+        throw new Error("Perform release unsuccessful.");
     }
 
     private static async provisionRepository(personId: string, delivId: string, repoId: string): Promise<RepositoryTransport[]> {
