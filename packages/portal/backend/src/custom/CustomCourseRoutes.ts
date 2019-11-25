@@ -7,9 +7,14 @@ import {
     RepositoryTransport,
     TeamTransport
 } from "../../../../common/types/PortalTypes";
+import Util from "../../../../common/Util";
+import {AdminController} from "../controllers/AdminController";
 import {AuthController} from "../controllers/AuthController";
+import {CourseController} from "../controllers/CourseController";
 import {DatabaseController} from "../controllers/DatabaseController";
 import {DeliverablesController} from "../controllers/DeliverablesController";
+import {GitHubActions} from "../controllers/GitHubActions";
+import {GitHubController} from "../controllers/GitHubController";
 import {PersonController} from "../controllers/PersonController";
 import {RepositoryController} from "../controllers/RepositoryController";
 import {TeamController} from "../controllers/TeamController";
@@ -18,12 +23,6 @@ import {AuditLabel, Deliverable, Grade, Person, Repository, Team} from "../Types
 import {AssignmentController} from "./AssignmentController";
 import {RubricController} from "./RubricController";
 import {ScheduleController} from "./ScheduleController";
-import {AdminController} from "../controllers/AdminController";
-import Util from "../../../../common/Util";
-import AdminRoutes from "../server/common/AdminRoutes";
-import {GitHubController} from "../controllers/GitHubController";
-import {GitHubActions} from "../controllers/GitHubActions";
-import {CourseController} from "../controllers/CourseController";
 
 export default class CustomCourseRoutes implements IREST {
 

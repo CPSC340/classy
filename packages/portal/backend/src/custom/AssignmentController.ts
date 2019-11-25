@@ -134,8 +134,12 @@ export class AssignmentController {
             Log.warn(`AssignmentController::closeAssignmentRepository(..) - Unable to close a repo that doesn't exist!`);
             return true;
         }
-
-        const success = await this.gha.setRepoPermission(repoId, "pull");
+        let success = false;
+        try {
+            success = await this.gha.setRepoPermission(repoId, "pull");
+        } catch (e) {
+            Log.error(`AssignmentController::closeAssignmentRepository(..) - ERROR when closing Repos via Teams: ${e}`);
+        }
 
         let collabSuccess = true;
 
