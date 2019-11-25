@@ -193,7 +193,7 @@ export class GradingPageView extends AdminPage {
 
                 // Create the grade input element
                 const gradeInputElement = document.createElement("ons-input");
-                if (GradingPageView.LETTER_GRADES_ENABLED === false) {
+                if (GradingPageView.LETTER_GRADES_ENABLED === false || subQuestion.modifiers.includes("numerical")) {
                     // no letter grades, only numbers
                     this.setInputFilter(gradeInputElement, (val: string) => {
                         return this.numericalGradeInputFilter.test(val);
