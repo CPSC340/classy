@@ -124,8 +124,8 @@ export class Factory {
                     Log.info("Factory::getAdminView() - instantating new admin view for: " + this.name + '; using test DefaultAdminView');
                     plug = await require('./custom/DefaultAdminView');
                 }
-
-                if (this.name.toLowerCase() === 'mds' || this.name.toLowerCase() === 'cs340') {
+		const courseName = this.name.toLowerCase();
+                if (courseName === 'mds' || courseName === 'cs340' || courseName === 'cs330') {
                     // disable the rest of the tabs
                     tabs.teams = false; // no teams
                     tabs.results = false; // no results
