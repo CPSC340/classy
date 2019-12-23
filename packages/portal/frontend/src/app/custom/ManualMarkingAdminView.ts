@@ -60,7 +60,11 @@ export class ManualMarkingAdminView extends AdminView {
                 Log.error(`${this.loggingName}::renderPage::AdminConfig - Error: ${JSON.stringify(err)}`);
             });
 
-            this.generateGradeExport();
+            this.generateGradeExport().then(() => {
+                Log.info(`Successfully generated Grade Export`);
+            }).catch((err) => {
+                Log.error(`${this.loggingName}::renderPage::AdminConfig::generateGradeExportCallback(..) - Error: ${err}`);
+            });
         }
 
         Log.warn(`${this.loggingName}::renderPage(..) with name: ` + name + ` - complete`);
