@@ -8,11 +8,11 @@ import {
 } from "../../../../../common/types/CS340Types";
 import {DeliverableTransport, RepositoryTransport, TeamTransport} from "../../../../../common/types/PortalTypes";
 import {Factory} from "../Factory";
+import {TableCell} from "../util/SortableTable";
 import {UI} from "../util/UI";
 import {AdminDeliverablesTab} from "./AdminDeliverablesTab";
 import {AdminMarkingTab} from "./AdminMarkingTab";
 import {AdminPage} from "./AdminPage";
-import {AdminResultsTab} from "./AdminResultsTab";
 import {AdminView} from "./AdminView";
 
 const ERROR_POTENTIAL_INCORRECT_INPUT: string = "input triggered warning";
@@ -23,7 +23,7 @@ const ERROR_MALFORMED_PAGE: string = "malformed page with info elements";
 const WARN_EMPTY_FIELD: string = "empty field";
 
 export class GradingPageView extends AdminPage {
-    public static LETTER_GRADES_ENABLED: boolean = true;
+    public static LETTER_GRADES_ENABLED: boolean = false;
     public static UBC_LETTER_GRADES: Map<string, {lower: number, upper: number}> = new Map<string, {lower: number, upper: number}>([
         ["A+", {lower: 90, upper: 100}],
         ["A" , {lower: 85, upper: 89}] ,
@@ -348,6 +348,26 @@ export class GradingPageView extends AdminPage {
             Log.info(`GradingPage::populateGradingPage(..) - Did not find next person, skipping button creation:`);
         }
 
+        // check if it is possible to create a new next button (based on the previous sorted array)
+        const tableRows: TableCell[][] = AdminMarkingTab.getCurrentTableState();
+        // TODO: Filter and find out what is the "next" student
+
+        for (let index = 0; index < tableRows.length; index += 1) {
+            const tableRow = tableRows[index];
+            if (tableRow[0].value === this.studentId) {
+                if (index + 1 < tableRows.length) {
+                    Log.info(`Found next student: ${tableRows[index + 1][0].value}`);
+                    const nextButton = document.createElement(("ons-button"));
+                    nextButton.onclick = async (evt) => {
+                        await this.submitNext(this.studentId, this.assignmentId, tableRows[index + 1][0].value);
+                    };
+                    nextButton.setAttribute("style", "margin-left: 10px; margin-right: 10px");
+                    nextButton.innerHTML = "Next Assignment";
+                    gradingSectionElement!.appendChild(nextButton);
+                    break;
+                }
+            }
+        }
         // check if it is possible to create a next button
         // const lastArray = AdminMarkingTab.lastGradingArray;
 

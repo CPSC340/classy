@@ -121,10 +121,10 @@ export class SortableTable {
             const ths = div.getElementsByTagName('th');
             const thsArray = Array.prototype.slice.call(ths, 0);
             for (const th of thsArray) {
-                th.onclick = function() {
+                th.addEventListener("click", function() {
                     const colName = this.getAttribute('col');
                     that.sort(colName);
-                };
+                });
             }
         } else {
             Log.error('SortableTable::generate() - ' + this.divName + ' is null');
@@ -255,6 +255,10 @@ export class SortableTable {
                 return (aVal - bVal) * mult;
             }
         });
+    }
+
+    public getRows(): TableCell[][] {
+        return this.rows;
     }
 
     // code from: https://www.codexworld.com/export-html-table-data-to-csv-using-javascript/
