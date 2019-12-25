@@ -91,13 +91,6 @@ export default class CustomCourseRoutes implements IREST {
                 personMap.set(person.id, person);
             });
 
-            // if (!personMap.has(sid)) {
-            //     res.send(404, {error: `Invalid student ID specified, could not find student!`});
-            //     return next();
-            // }
-
-            // const labId = personMap.get(sid).labId;
-
             // filter teams to just this deliverable, and no grades
             const filteredTeams = (teams as Team[]).filter((team) => {
                 return team.delivId === delivId;

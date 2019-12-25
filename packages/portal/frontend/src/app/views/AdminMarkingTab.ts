@@ -22,6 +22,7 @@ export class AdminMarkingTab extends AdminPage {
 
     private selectedDeliverable: string | null = null;
     public static lastGradingArray: TeamTransport[] = [];
+    private static studentTable: SortableTable | null = null;
 
     // private readonly remote: string; // url to backend
     constructor(remote: string) {
@@ -72,7 +73,6 @@ export class AdminMarkingTab extends AdminPage {
             this.selectedDeliverable = (evt.target as HTMLSelectElement).value;
             await this.renderStudentSubmissions(this.selectedDeliverable);
         };
-
     }
 
     private async renderStudentSubmissions(delivId: string, hiddenNames: boolean = false) {
@@ -220,6 +220,11 @@ export class AdminMarkingTab extends AdminPage {
             }
         });
         st.generate();
+        AdminMarkingTab.studentTable = st;
+    }
+
+    public static getCurrentTableState(): TableCell[][] {
+        return this.studentTable.getRows();
     }
 
     private checkIfCompletelyGraded(gradeTransport: GradeTransport): boolean {
