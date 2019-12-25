@@ -23,7 +23,7 @@ const ERROR_MALFORMED_PAGE: string = "malformed page with info elements";
 const WARN_EMPTY_FIELD: string = "empty field";
 
 export class GradingPageView extends AdminPage {
-    public static LETTER_GRADES_ENABLED: boolean = false;
+    public static LETTER_GRADES_ENABLED: boolean = true;
     public static UBC_LETTER_GRADES: Map<string, {lower: number, upper: number}> = new Map<string, {lower: number, upper: number}>([
         ["A+", {lower: 90, upper: 100}],
         ["A" , {lower: 85, upper: 89}] ,
