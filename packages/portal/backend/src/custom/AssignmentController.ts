@@ -310,13 +310,16 @@ export class AssignmentController {
                 const repoURL = `${config.getProp(ConfigKey.githubHost)}/${config.getProp(ConfigKey.org)}/${repoName}`;
 
                 const fileContents = `# ${repoName}\n\n` +
-                    `## Submission Details\n\nPlease enter details of your submission here...\n\n` +
-                    `## Help us improve the labs\n\n` +
-                    `The MDS program is continually looking to improve our courses, including lab questions and content. ` +
+                    `## Submission Details\n\nPlease enter details of your submission here, per the ` +
+                    `[homework submission instructions](https://github.students.cs.ubc.ca/` +
+                    `cpsc330-2019w-t2/home/blob/master/docs/homework_instructions.md).\n\n` +
+                    `## Help us improve the course\n\n` +
+                    `We are continually looking to improve our courses, including homework questions and content. ` +
                     `The following optional questions will not affect your grade in any way nor will they be used for anything ` +
-                    `other than program improvement:\n\n1. Approximately how many hours did you spend working or thinking about this ` +
-                    `assignment (including lab time)?\n\n#Ans:\n\n2. Were there any questions that you particularly liked or disliked?\n` +
-                    `\n#Ans: [Questions you liked]\n\n#Ans: [Questions you disliked]\n\n`;
+                    `other than improving the course:\n\n1. Approximately how many hours did you spend working on or thinking about this ` +
+                    `assignment?\n\nAnswer:\n\n2. Were there any questions that you particularly liked or disliked? ` +
+                    `Please reference them by name / description rather than question number.\n` +
+                    `\nAnswer: [Questions you liked]\n\nAnswer: [Questions you disliked]\n\n`;
                 return await this.gha.writeFileToRepo(repoURL, "README.md", fileContents, false);
             }
         }
