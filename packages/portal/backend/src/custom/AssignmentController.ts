@@ -36,7 +36,7 @@ export class AssignmentController {
             Log.error(`AssignmentController::createAllRepositories(..) - Error: Unable to find deliverable`);
             return false;
         }
-        const provisionDetails: RepositoryTransport[] = await this.cc.planProvision(deliverableRecord, false);
+        const provisionDetails: RepositoryTransport[] = await this.cc.planProvision(deliverableRecord, true);
 
         const repoRecordPromises: Array<Promise<Repository>> = [];
 
