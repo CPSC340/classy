@@ -216,9 +216,9 @@ export class ManualMarkingAdminView extends AdminView {
             };
 
             const schedulerSwitch = this.buildOnsListItem(`ion-calendar`,
-                `Automatically generate Repositories`,
-                sliderSwitch, `This allows Classy to automatically provision and ` +
-                `release repositories without user interaction`);
+                `Automatically manage Repositories`,
+                sliderSwitch, `This allows Classy to automatically provision, ` +
+                `release, and close repositories without user interaction`);
 
             const openBlock = openSwitch.parentNode.parentNode.parentNode;
             const upperBlock = openBlock.parentNode;
@@ -330,6 +330,11 @@ export class ManualMarkingAdminView extends AdminView {
         if (selectedDeliverable === undefined) {
             Log.error(`${this.loggingName}::populateAssignmentFields(..) - Error: Invalid deliverable ID specified; ` +
                 `unable to find deliverable with ID: ${delivId}`);
+
+            Log.info("Adding default autoGenerate switch to true");
+            const scheduleSwitchElement: OnsSwitchElement =
+                document.getElementById(`adminEditDeliverablePage-autoGenerate`) as OnsSwitchElement;
+            scheduleSwitchElement.checked = true;
             return;
         }
 
