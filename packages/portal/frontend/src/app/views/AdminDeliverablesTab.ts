@@ -226,10 +226,10 @@ export class AdminDeliverablesTab extends AdminPage {
             this.setToggle('adminEditDeliverablePage-studentsMakeTeams', false, this.isAdmin);
 
             this.setToggle('adminEditDeliverablePage-gradesReleased', false, this.isAdmin);
-            this.setToggle('adminEditDeliverablePage-visible', false, this.isAdmin);
+            this.setToggle('adminEditDeliverablePage-visible', true, this.isAdmin);
             this.setToggle('adminEditDeliverablePage-lateAutoTest', false, this.isAdmin);
 
-            this.setToggle('adminEditDeliverablePage-shouldAutoTest', true, this.isAdmin);
+            this.setToggle('adminEditDeliverablePage-shouldAutoTest', false, this.isAdmin);
             this.setTextField('adminEditDeliverablePage-atContainerTimeout', '300', this.isAdmin);
             this.setTextField('adminEditDeliverablePage-atStudentDelay', (12 * 60 * 60) + '', this.isAdmin);
             this.setTextField('adminEditDeliverablePage-atCustom', '{}', this.isAdmin);
