@@ -335,6 +335,11 @@ export class ManualMarkingAdminView extends AdminView {
             const scheduleSwitchElement: OnsSwitchElement =
                 document.getElementById(`adminEditDeliverablePage-autoGenerate`) as OnsSwitchElement;
             scheduleSwitchElement.checked = true;
+
+            Log.info("Setting default deliverable is an assignment to true");
+            const assignmentSwitchElement: OnsSwitchElement =
+                document.getElementById(`adminEditDeliverablePage-isAssignment`) as OnsSwitchElement;
+            assignmentSwitchElement.checked = true;
             return;
         }
 
