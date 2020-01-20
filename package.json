@@ -67,5 +67,8 @@
         "cover": "nyc --reporter text --reporter html yarn run test",
         "run:dev": "nohup node ./src/AutoTestDaemon.js 310 &> nohup.out &",
         "run:prod": "LOG_LEVEL=INFO nohup node ./src/AutoTestDaemon.js 310 &> nohup.out &"
+    },
+    "resolutions": {
+        "**/event-stream": "^4.0.1"
     }
 }

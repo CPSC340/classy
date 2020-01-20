@@ -258,7 +258,7 @@ export class GitHubController implements IGitHubController {
             }
 
             Log.trace("GitHubController::createRepositoryWithPath() - add staff team to repo");
-            const staffTeamNumber = await new TeamController().getTeamNumber('staff');
+            const staffTeamNumber = await new TeamController().getTeamNumber(TeamController.STAFF_NAME);
             //  const staffTeamNumber = await this.gha.getTeamNumber('staff');
             Log.trace('GitHubController::createRepositoryWithPath(..) - staffTeamNumber: ' + staffTeamNumber);
             const staffAdd = await this.gha.addTeamToRepo(staffTeamNumber, repoName, 'admin');
@@ -317,8 +317,20 @@ export class GitHubController implements IGitHubController {
             if (asCollaborators) {
                 Log.info("GitHubController::releaseRepository(..) - releasing repository as " +
                     "individual collaborators");
-                Log.error("GitHubController::releaseRepository(..) - ERROR: Not implemented");
-                throw new Error("GitHubController - w/ collaborators NOT IMPLEMENTED");
+                await this.checkDatabase(null, team.id);
+
+                const personIds = team.personIds;
+                const githubIds: string[] = [];
+                for (const personId of personIds) {
+                    const personRecord = await this.dbc.getPerson(personId);
+
+                    githubIds.push(personRecord.githubId);
+                }
+
+                const success = await this.gha.addCollaborators(repo.id, githubIds, "push");
+                team.custom.githubAttached = true;
+                await this.dbc.writeTeam(team);
+                Log.info(`GithubController::releaseRepository(..) - success: ${success}`);
             } else {
 
                 await this.checkDatabase(null, team.id);

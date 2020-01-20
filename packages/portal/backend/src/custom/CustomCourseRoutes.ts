@@ -7,9 +7,14 @@ import {
     RepositoryTransport,
     TeamTransport
 } from "../../../../common/types/PortalTypes";
+import Util from "../../../../common/Util";
+import {AdminController} from "../controllers/AdminController";
 import {AuthController} from "../controllers/AuthController";
+import {CourseController} from "../controllers/CourseController";
 import {DatabaseController} from "../controllers/DatabaseController";
 import {DeliverablesController} from "../controllers/DeliverablesController";
+import {GitHubActions} from "../controllers/GitHubActions";
+import {GitHubController} from "../controllers/GitHubController";
 import {PersonController} from "../controllers/PersonController";
 import {RepositoryController} from "../controllers/RepositoryController";
 import {TeamController} from "../controllers/TeamController";
@@ -40,12 +45,14 @@ export default class CustomCourseRoutes implements IREST {
         server.post("/portal/cs340/verifyAllScheduledTasks/", CustomCourseRoutes.verifyAllScheduledTasks);
 
         server.post("/portal/cs340/provision/:delivId/:repoId", CustomCourseRoutes.provisionOverride);
+        server.post('/portal/cs340/release/:repoId', CustomCourseRoutes.releaseOverride);
 
         server.get("/portal/cs340/getNextUngradedSameLab/:delivId/:sid", CustomCourseRoutes.getNextUngradedSameLab);
         server.get("/portal/cs340/getNextUngraded/:delivId/:sid", CustomCourseRoutes.getNextUngraded);
 
         server.get("/portal/cs340/isFinalGradeReleased", CustomCourseRoutes.isFinalGradeReleased);
         server.post("/portal/cs340/toggleFinalGradeRelease", CustomCourseRoutes.toggleFinalGradeRelease);
+        server.get("/portal/cs340/retrieveStudentsGrades/:delivId", CustomCourseRoutes.retrieveStudentsGrades);
     }
     public static async getNextUngraded(req: any, res: any, next: any) {
         Log.info(`CS340Routes::getNextUngraded(..) - start`);
@@ -83,13 +90,6 @@ export default class CustomCourseRoutes implements IREST {
             (persons as Person[]).forEach((person) => {
                 personMap.set(person.id, person);
             });
-
-            // if (!personMap.has(sid)) {
-            //     res.send(404, {error: `Invalid student ID specified, could not find student!`});
-            //     return next();
-            // }
-
-            // const labId = personMap.get(sid).labId;
 
             // filter teams to just this deliverable, and no grades
             const filteredTeams = (teams as Team[]).filter((team) => {
@@ -472,12 +472,7 @@ export default class CustomCourseRoutes implements IREST {
 
         const ac = new AuthController();
         const isValid = await ac.isPrivileged(user, token);
-        if (!isValid.isStaff) {
-            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
-            res.send(401, {
-                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
-            });
-        } else {
+        if (isValid.isAdmin || isValid.isStaff) {
             const studentId: string = req.params.sid;
             const delivId: string = req.params.delivId;
 
@@ -496,9 +491,16 @@ export default class CustomCourseRoutes implements IREST {
                     return next();
                 }
             }
-            res.send(400, {error: `Improper usage; unable to find repository for student ${studentId} and` +
-                    `deliverable: ${delivId}`});
+            res.send(400, {
+                error: `Improper usage; unable to find repository for student ${studentId} and` +
+                    `deliverable: ${delivId}`
+            });
             return next();
+        } else {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
+            res.send(401, {
+                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
+            });
         }
     }
 
@@ -680,6 +682,53 @@ export default class CustomCourseRoutes implements IREST {
         return next();
     }
 
+    public static async retrieveStudentsGrades(req: any, res: any, next: any) {
+        Log.info(`CS340Routes::retrieveStudentsGrades(..) - start`);
+
+        const user = req.headers.user;
+        const token = req.headers.token;
+
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+
+        if (!isValid.isAdmin) {
+            Log.info(`CS340Routes::retrieveStudentsGrades(..) - Unauthorized usage of API: ${user}`);
+        } else {
+            Log.info(`CS340Routes::retrieveStudentsGrades(..) - Authorized`);
+            const delivId = req.params.delivId;
+
+            const db: DatabaseController = DatabaseController.getInstance();
+            const grades = await db.getGrades();
+
+            const filteredGrades: any = {};
+
+            grades.filter((grade) => {
+                return grade.delivId === delivId;
+            }).forEach((grade) => {
+                const rubricGrades: any = {};
+
+                const questions = grade.custom.assignmentGrade.questions;
+
+                questions.forEach((question) => {
+                    rubricGrades[question.name] = [];
+                    question.subQuestions.forEach((subQuestion) => {
+                        const rubricRepresentation: any = {};
+                        rubricRepresentation[subQuestion.name] = subQuestion.grade;
+                        rubricRepresentation["feedback"] = subQuestion.feedback;
+                        rubricGrades[question.name].push(rubricRepresentation);
+                    });
+                });
+
+                rubricGrades["feedback"] = grade.custom.assignmentGrade.feedback;
+
+                filteredGrades[grade.personId] = rubricGrades;
+                Log.info(`CS340Routes::retrieveStudentsGrades(..) - RubricGrade: ${JSON.stringify(rubricGrades)}`);
+            });
+
+            res.send(200, JSON.stringify(filteredGrades));
+        }
+    }
+
     /**
      * A custom provision handler to integrate into the provisioning page. Transparently acts like the standard
      * provision repo API, but does some Assignment handling, if needed.
@@ -720,6 +769,71 @@ export default class CustomCourseRoutes implements IREST {
             res.send(400, {failure: {message: `Unable to provision repo: ${err.message}`}, shouldLogout: false});
             return next(false);
         }
+    }
+
+    /**
+     * A custom release handler to integrate into the provisioning page. Transparently acts like the standard
+     * release repo API, but does some Assignment handling, if needed.
+     * @param req
+     * @param res
+     * @param next
+     */
+    private static async releaseOverride(req: any, res: any, next: any) {
+        Log.info(`CS340Routes::releaseOverride(..) - start`);
+
+        const user = req.headers.user;
+        const token = req.headers.token;
+
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+        if (isValid.isStaff === false && isValid.isAdmin === false) {
+            Log.info(`CS340Routes - Unauthorized usage of API: ${user}`);
+            res.send(401, {
+                error: "Unauthorized usage of API: If you believe this is an error, please contact the course admin"
+            });
+            return next();
+        }
+
+        let payload: Payload;
+        const repoId = req.params.repoId;
+
+        Log.info('CS340Routes::releaseOverride(..) - start; repoId: ' + repoId);
+        try {
+            const success = await CustomCourseRoutes.releaseRepository(user, repoId);
+            payload = {success: success};
+            res.send(200, payload);
+            return next(true);
+        } catch (err) {
+            Log.error(`CS340Routes:: Error - Unable to provision repo: ${err.message} `);
+            res.send(400, {failure: {message: `Unable to provision repo: ${err.message}`}, shouldLogout: false});
+            return next(false);
+        }
+    }
+
+    private static async releaseRepository(personId: string, repoId: string): Promise<RepositoryTransport[]> {
+        const ghc = new GitHubController(GitHubActions.getInstance());
+        const ac = new AdminController(ghc);
+
+        // TODO: if course is SDMM, always fail
+        const start = Date.now();
+        const rc = new RepositoryController();
+
+        const repo = await rc.getRepository(repoId);
+        Log.info("CS340Routes::performRelease( " + personId + ", " + repoId + " ) - repo: " + repo);
+        if (repo !== null) {
+            const dbc = DatabaseController.getInstance();
+            await dbc.writeAudit(AuditLabel.REPO_RELEASE, personId, {}, {}, {repoId: repoId});
+
+            const releaseSucceeded = await ac.performRelease([repo], true);
+            Log.info('CS340Routes::performRelease() - success; # results: ' + releaseSucceeded.length +
+                '; took: ' + Util.took(start));
+            return releaseSucceeded;
+
+        } else {
+            Log.error("CS340Routes::performRelease() - unknown repository: " + repoId);
+        }
+        // should never get here unless something goes wrong
+        throw new Error("Perform release unsuccessful.");
     }
 
     private static async provisionRepository(personId: string, delivId: string, repoId: string): Promise<RepositoryTransport[]> {

@@ -4,13 +4,13 @@ import {AssignmentGrade} from "../../../../common/types/CS340Types";
 import {RepositoryTransport} from "../../../../common/types/PortalTypes";
 import {GradePayload} from "../../../../common/types/SDMMTypes";
 import Util from "../../../../common/Util";
-import {Deliverable, Person, Repository, Team} from "../Types";
 import {AdminController} from "../controllers/AdminController";
 import {DatabaseController} from "../controllers/DatabaseController";
 import {GitHubActions, IGitHubActions} from "../controllers/GitHubActions";
 import {GitHubController} from "../controllers/GitHubController";
 import {GradesController} from "../controllers/GradesController";
 import {RepositoryController} from "../controllers/RepositoryController";
+import {Deliverable, Person, Repository, Team} from "../Types";
 import {RubricController} from "./RubricController";
 import {ScheduleController} from "./ScheduleController";
 
@@ -25,6 +25,7 @@ export class AssignmentController {
     private cc: AdminController = new AdminController(this.ghc);
 
     public static COLLABORATOR_FLAG: boolean = true;
+    private static AGGRESSIVE_TAKEOVER: boolean = true;
 
     public async createAllRepositories(delivId: string): Promise<boolean> {
         Log.info(`AssignmentController::createAllRepositories(${delivId}) - start`);
@@ -133,8 +134,12 @@ export class AssignmentController {
             Log.warn(`AssignmentController::closeAssignmentRepository(..) - Unable to close a repo that doesn't exist!`);
             return true;
         }
-
-        const success = await this.gha.setRepoPermission(repoId, "pull");
+        let success = false;
+        try {
+            success = await this.gha.setRepoPermission(repoId, "pull");
+        } catch (e) {
+            Log.error(`AssignmentController::closeAssignmentRepository(..) - ERROR when closing Repos via Teams: ${e}`);
+        }
 
         let collabSuccess = true;
 
@@ -231,19 +236,38 @@ export class AssignmentController {
                 const start = Date.now();
                 Log.info(`AssignmentController::provisionRepos(..) ***** START *****; repo: ${repo.id}`);
                 if (repo.URL === null) {
-                    const teams: Team[] = [];
-                    for (const teamId of repo.teamIds) {
-                        teams.push(await this.db.getTeam(teamId));
+                    let toProvision: boolean = true;
+                    let success: boolean = false;
+                    if (AssignmentController.AGGRESSIVE_TAKEOVER === true) {
+                        // this is an aggressive takeover
+                        const repoExists = await this.gha.repoExists(repo.id);
+                        Log.info(`AssignmentController::preformProvision(..) - Aggressive Takeover; ` +
+                            `Checking if repo exists. Exists: ${repoExists}`);
+                        if (repoExists === true) {
+                            // this repo already exists, so don't bother provisioning
+                            Log.warn(`AssignmentController::performProvision(..) - repo: ${repo.id} already exists, recording...`);
+                            toProvision = false;
+                            success = true;
+                        }
                     }
-                    Log.info(`AssignmentController::performProvision(..) - about to provision: ${repo.id}`);
 
-                    let success: boolean;
-                    if (importPath !== "") {
-                        success = await this.ghc.createRepositoryWithPath(repo.id, teams, importURL, importPath);
-                    } else {
-                        success = await this.ghc.provisionRepository(repo.id, teams, importURL);
+                    if (toProvision === true) {
+                        const teams: Team[] = [];
+                        for (const teamId of repo.teamIds) {
+                            teams.push(await this.db.getTeam(teamId));
+                        }
+                        Log.info(`AssignmentController::performProvision(..) - about to provision: ${repo.id}`);
+
+                        if (importPath !== "") {
+                            success = await this.ghc.createRepositoryWithPath(repo.id, teams, importURL, importPath);
+                        } else {
+                            success = await this.ghc.provisionRepository(repo.id, teams, importURL);
+                        }
+                        if (success) {
+                            await this.addDefaultREADME(repo.id, teams);
+                        }
+                        Log.info(`AssignmentController::performProvision(..) - provisioned: ${repo.id}; success: ${success}`);
                     }
-                    Log.info(`AssignmentController::performProvision(..) - provisioned: ${repo.id}; success: ${success}`);
 
                     if (success === true) {
                         repo.URL = config.getProp(ConfigKey.githubHost) + "/" + config.getProp(ConfigKey.org) + "/" + repo.id;
@@ -275,6 +299,29 @@ export class AssignmentController {
             provisionedRepositoryTransport.push(RepositoryController.repositoryToTransport(repo));
         }
         return provisionedRepositoryTransport;
+    }
+
+    public async addDefaultREADME(repoName: string, teams: Team[], course: string = "MDS"): Promise<boolean> {
+        Log.info(`AssignmentController::addDefaultREADME(${repoName},${teams},${course}) - start`);
+        const config = Config.getInstance();
+
+        switch (course.toLowerCase()) {
+            case "mds": {
+                const repoURL = `${config.getProp(ConfigKey.githubHost)}/${config.getProp(ConfigKey.org)}/${repoName}`;
+
+                const fileContents = `# ${repoName}\n\n` +
+                    `## Submission Details\n\nPlease enter details of your submission here...\n\n` +
+                    `## Help us improve the labs\n\n` +
+                    `The MDS program is continually looking to improve our courses, including lab questions and content. ` +
+                    `The following optional questions will not affect your grade in any way nor will they be used for anything ` +
+                    `other than program improvement:\n\n1. Approximately how many hours did you spend working or thinking about this ` +
+                    `assignment (including lab time)?\n\n#Ans:\n\n2. Were there any questions that you particularly liked or disliked?\n` +
+                    `\n#Ans: [Questions you liked]\n\n#Ans: [Questions you disliked]\n\n`;
+                return await this.gha.writeFileToRepo(repoURL, "README.md", fileContents, false);
+            }
+        }
+
+        return true;
     }
 
     public async getFinalGradeStatus(): Promise<boolean> {

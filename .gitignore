@@ -60,3 +60,7 @@ ssl/
 testOutput/
 packages/autotest/testOutput/
 packages/autotest/test/data/
+
+.ideabak
+db
+

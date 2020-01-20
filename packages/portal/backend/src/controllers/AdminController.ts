@@ -633,6 +633,9 @@ export class AdminController {
         // remove all withdrawn people, we don't need to provision these
         allPeople = allPeople.filter((person) => person.kind !== PersonKind.WITHDRAWN);
 
+        // remove all non-students
+        allPeople = allPeople.filter((person) => person.kind !== PersonKind.WITHDRAWN);
+
         const allTeams: Team[] = await this.tc.getAllTeams();
 
         if (deliv.teamMaxSize === 1) {
@@ -932,7 +935,6 @@ export class AdminController {
 
         return releasedRepositoryTransport;
     }
-
 
     public async makeReposReadOnly(deliv: Deliverable): Promise<RepositoryTransport[]> {
         Log.info("AdminController::makeReposReadOnly( " + deliv.id + " ) - start");

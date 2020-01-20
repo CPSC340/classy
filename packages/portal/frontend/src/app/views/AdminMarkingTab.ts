@@ -22,6 +22,7 @@ export class AdminMarkingTab extends AdminPage {
 
     private selectedDeliverable: string | null = null;
     public static lastGradingArray: TeamTransport[] = [];
+    private static studentTable: SortableTable | null = null;
 
     // private readonly remote: string; // url to backend
     constructor(remote: string) {
@@ -72,7 +73,6 @@ export class AdminMarkingTab extends AdminPage {
             this.selectedDeliverable = (evt.target as HTMLSelectElement).value;
             await this.renderStudentSubmissions(this.selectedDeliverable);
         };
-
     }
 
     private async renderStudentSubmissions(delivId: string, hiddenNames: boolean = false) {
@@ -187,6 +187,10 @@ export class AdminMarkingTab extends AdminPage {
             // ASSUMPTION: If students are on a team for a deliverable, they should all have the same grade
             const studentId: string = team.people[0];
             const studentTransport = studentIdMap.get(studentId);
+            if (studentTransport === undefined) {
+                Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Error: Unable to find student mapping`);
+                continue;
+            }
             if (studentTransport === null) {
                 Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Unable to find student object`);
                 newRow.push({value: `N/A`, html: `N/A`});
@@ -216,6 +220,11 @@ export class AdminMarkingTab extends AdminPage {
             }
         });
         st.generate();
+        AdminMarkingTab.studentTable = st;
+    }
+
+    public static getCurrentTableState(): TableCell[][] {
+        return this.studentTable.getRows();
     }
 
     private checkIfCompletelyGraded(gradeTransport: GradeTransport): boolean {

@@ -398,14 +398,14 @@ export class AdminProvisionPage extends AdminPage {
     private async provisionRepo(delivId: string, repoId: string): Promise<boolean> {
         Log.info("AdminProvisionPage::provisionRepo( " + delivId + ", " + repoId + " ) - start");
 
-        const url = this.remote + '/portal/admin/provision/' + delivId + '/' + repoId;
+        const url = this.remote + '/portal/cs340/provision/' + delivId + '/' + repoId;
         return await this.performAction(url);
     }
 
     private async releaseRepo(repoId: string): Promise<boolean> {
         Log.info("AdminProvisionPage::releaseRepo( " + repoId + " ) - start");
 
-        const url = this.remote + '/portal/admin/release/' + repoId;
+        const url = this.remote + '/portal/cs340/release/' + repoId;
         return await this.performAction(url);
     }
 
