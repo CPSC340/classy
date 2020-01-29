@@ -185,29 +185,36 @@ export class AdminMarkingTab extends AdminPage {
             }
 
             // ASSUMPTION: If students are on a team for a deliverable, they should all have the same grade
-            const studentId: string = team.people[0];
-            const studentTransport = studentIdMap.get(studentId);
-            if (studentTransport === undefined) {
-                Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Error: Unable to find student mapping`);
-                continue;
-            }
-            if (studentTransport === null) {
-                Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Unable to find student object`);
-                newRow.push({value: `N/A`, html: `N/A`});
-            } else {
-                newRow.push({value: `${studentTransport.labId}`, html: `${studentTransport.labId}`});
-            }
-            let newEntry: TableCell;
+            let foundStudent: boolean = false;
+            for (const studentId of team.people) {
+                const studentTransport = studentIdMap.get(studentId);
+                if (studentTransport === undefined) {
+                    Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Error: Unable to find student mapping for: ${studentId}`);
+                    continue;
+                }
+                if (studentTransport === null) {
+                    Log.info(`AdminMarkingTab::renderStudentSubmission(..) - Unable to find student object`);
+                    newRow.push({value: `N/A`, html: `N/A`});
+                } else {
+                    newRow.push({value: `${studentTransport.labId}`, html: `${studentTransport.labId}`});
+                }
+                let newEntry: TableCell;
 
-            if (gradeMap.has(studentId)) {
-                newEntry = this.buildGradeCell(studentId, gradeMap.get(studentId), deliverableTransport);
-            } else {
-                newEntry = this.buildGradeCell(studentId, null, deliverableTransport);
+                if (gradeMap.has(studentId)) {
+                    newEntry = this.buildGradeCell(studentId, gradeMap.get(studentId), deliverableTransport);
+                } else {
+                    newEntry = this.buildGradeCell(studentId, null, deliverableTransport);
+                }
+
+                newRow.push(newEntry);
+                foundStudent = true;
+                st.addRow(newRow);
+                break;
             }
 
-            newRow.push(newEntry);
-
-            st.addRow(newRow);
+            if (foundStudent === false) {
+                Log.warn(`AdminMarkingTab::renderStudentSubmission(..) - Unable to find a student in team: ${team.id}`);
+            }
         }
 
         AdminMarkingTab.lastGradingArray = teamTransportTable.sort((item1, item2) => {
