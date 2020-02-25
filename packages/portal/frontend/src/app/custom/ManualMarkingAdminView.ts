@@ -46,6 +46,7 @@ export class ManualMarkingAdminView extends AdminView {
 
         if (name === `adminProvision`) {
             Log.info(`${this.loggingName}::renderPage::AdminProvision - Injecting buttons`);
+            this.insertFinalizeTeamsButton();
             this.insertProvisionAllRepositoriesButton();
             this.insertReleaseAllRepositoriesButton();
             this.insertCloseAssignmentButton();
@@ -126,6 +127,33 @@ export class ManualMarkingAdminView extends AdminView {
         gradingView.init(opts).then().catch();
 
         return null;
+    }
+
+    protected insertFinalizeTeamsButton(): void {
+        Log.info(`${this.loggingName}::insertFinalizeTeamsButton(..) - start`);
+
+        const repositorySelectDropdown: HTMLSelectElement = document.getElementById(`provisionRepoDeliverableSelect`) as HTMLSelectElement;
+        const upperDiv: HTMLDivElement = repositorySelectDropdown.parentElement as HTMLDivElement;
+        const listItemDivision: OnsListItemElement = upperDiv.parentElement as OnsListItemElement;
+        const lastItemInList: HTMLDivElement = listItemDivision.children[listItemDivision.childElementCount - 1] as HTMLDivElement;
+
+        const finalizeTeamsButton: OnsButtonElement = document.createElement(`ons-button`) as OnsButtonElement;
+        finalizeTeamsButton.setAttribute(`id`, `adminProvision-finalizeTeams`);
+        finalizeTeamsButton.setAttribute(`modifier`, `medium`);
+        finalizeTeamsButton.innerText = `Lock in Teams`;
+        finalizeTeamsButton.onclick = async (event) => {
+          UI.notification(`Finalizing Teams...`);
+          // TODO: Implement logic to call function to lock in teams
+        };
+
+        const finalizeTeamsDiv = document.createElement(`div`);
+        finalizeTeamsDiv.classList.add(`right`);
+        finalizeTeamsDiv.classList.add(`list-item__right`);
+        finalizeTeamsDiv.classList.add(`settingRight`);
+        finalizeTeamsDiv.appendChild(finalizeTeamsButton);
+
+        listItemDivision.insertBefore(finalizeTeamsDiv, lastItemInList);
+
     }
 
     protected insertProvisionAllRepositoriesButton(): void {
