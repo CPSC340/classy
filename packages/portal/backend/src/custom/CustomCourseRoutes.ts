@@ -28,6 +28,7 @@ export default class CustomCourseRoutes implements IREST {
 
     public registerRoutes(server: restify.Server) {
         Log.info('CS340Routes::registerRoutes() - start');
+        ScheduleController.getInstance(); // initialize schedule controller
 
         server.get("/portal/cs340/retrieveRepoUrl/:sid/:delivId", CustomCourseRoutes.retrieveRepoUrl);
         server.get("/portal/cs340/getStudentTeamByDeliv/:sid/:delivId", CustomCourseRoutes.getStudentTeamByDeliv);
@@ -54,6 +55,7 @@ export default class CustomCourseRoutes implements IREST {
         server.post("/portal/cs340/toggleFinalGradeRelease", CustomCourseRoutes.toggleFinalGradeRelease);
         server.get("/portal/cs340/retrieveStudentsGrades/:delivId", CustomCourseRoutes.retrieveStudentsGrades);
     }
+
     public static async getNextUngraded(req: any, res: any, next: any) {
         Log.info(`CS340Routes::getNextUngraded(..) - start`);
 

@@ -37,7 +37,15 @@ export class ScheduleController {
     }
 
     private constructor() {
+        Log.info(`ScheduleController::initialization(..) - BEGIN`);
         this.taskList = new Map<string, Task>();
+        this.dc.getAllDeliverables().then( (deliverables: Deliverable[]) => {
+            // const bootstrapScheduleResult: Array<Promise<void>> = [];
+            for (const deliverable of deliverables) {
+                // bootstrapScheduleResult.push(this.verifyScheduledAssignmentTasks(deliverable.id));
+                this.verifyScheduledAssignmentTasks(deliverable.id).then().catch();
+            }
+        }).catch();
     }
 
     public async scheduleAssignmentCreation(scheduledTime: Date, assignId: string): Promise<boolean> {
