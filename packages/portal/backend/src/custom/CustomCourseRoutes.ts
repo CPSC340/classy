@@ -28,6 +28,7 @@ export default class CustomCourseRoutes implements IREST {
 
     public registerRoutes(server: restify.Server) {
         Log.info('CS340Routes::registerRoutes() - start');
+        ScheduleController.getInstance(); // initialize schedule controller
 
         server.get("/portal/cs340/retrieveRepoUrl/:sid/:delivId", CustomCourseRoutes.retrieveRepoUrl);
         server.get("/portal/cs340/getStudentTeamByDeliv/:sid/:delivId", CustomCourseRoutes.getStudentTeamByDeliv);
