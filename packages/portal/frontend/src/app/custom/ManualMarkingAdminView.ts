@@ -77,7 +77,8 @@ export class ManualMarkingAdminView extends AdminView {
         // Log.warn(`${this.loggingName}::renderPage::AdminEditDeliverable - Injecting switches`);
         this.insertRepositoryScheduleCreationSwitch(`adminEditDeliverablePage-autoGenerate`);
         this.insertAssignmentBlock();
-        this.populateAssignmentFields((opts as any).delivId).then().catch();
+        // this.populateAssignmentFields((opts as any).delivId).then().catch();
+        this.populateAssignmentFields((opts as any).delivId).then( () => this.updateAssignmentBlock()).catch();
 
         const fab = document.querySelector(`#adminEditDeliverableSave`) as OnsFabElement;
         fab.addEventListener(`click`, async () => {
