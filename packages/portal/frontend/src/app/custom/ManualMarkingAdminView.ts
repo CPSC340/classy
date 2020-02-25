@@ -8,6 +8,7 @@ import {Factory} from "../Factory";
 import {UI} from "../util/UI";
 import {AdminDeliverablesTab} from "../views/AdminDeliverablesTab";
 import {AdminMarkingTab} from "../views/AdminMarkingTab";
+import {AdminProvisionPage} from "../views/AdminProvisionPage";
 import {AdminTabs, AdminView} from "../views/AdminView";
 import {GradingPageView} from "../views/GradingPage";
 
@@ -141,9 +142,12 @@ export class ManualMarkingAdminView extends AdminView {
         finalizeTeamsButton.setAttribute(`id`, `adminProvision-finalizeTeams`);
         finalizeTeamsButton.setAttribute(`modifier`, `medium`);
         finalizeTeamsButton.innerText = `Lock in Teams`;
+        const that = this;
         finalizeTeamsButton.onclick = async (event) => {
-          UI.notification(`Finalizing Teams...`);
-          // TODO: Implement logic to call function to lock in teams
+            UI.notification(`Finalizing Teams...`);
+            await this.finalizeTeams(repositorySelectDropdown.value);
+            const provisionPage = new AdminProvisionPage(that.remote);
+            await provisionPage.init({});
         };
 
         const finalizeTeamsDiv = document.createElement(`div`);
@@ -923,5 +927,28 @@ export class ManualMarkingAdminView extends AdminView {
         provisionButton.disabled = false;
         toReleaseSelect.disabled = false;
         toProvisionSelect.disabled = false;
+    }
+
+    protected async finalizeTeams(delivId: string) {
+        Log.info(`${this.loggingName}::finalizeTeams( ${delivId} ) - start`);
+
+        // get class options
+        const options: any = AdminView.getOptions();
+        options.method = `post`;
+
+        const url = this.remote + `/portal/cs340/finalizeTeams/${delivId}`;
+        const response = await fetch(url, options);
+        const responseJson = await response.json();
+
+        Log.info(`${this.loggingName}::finalizeTeams() - response: ${JSON.stringify(responseJson)}`);
+
+        if (responseJson.success === true) {
+            UI.notificationToast(`Finalized teams for ${delivId}`);
+        } else {
+            UI.notificationToast(`Unable to finalize teams for ${delivId}; error: ` +
+                `${JSON.stringify(responseJson.failure.message)}`);
+        }
+
+        return;
     }
 }

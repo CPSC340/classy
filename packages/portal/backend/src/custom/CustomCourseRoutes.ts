@@ -53,7 +53,10 @@ export default class CustomCourseRoutes implements IREST {
         server.get("/portal/cs340/isFinalGradeReleased", CustomCourseRoutes.isFinalGradeReleased);
         server.post("/portal/cs340/toggleFinalGradeRelease", CustomCourseRoutes.toggleFinalGradeRelease);
         server.get("/portal/cs340/retrieveStudentsGrades/:delivId", CustomCourseRoutes.retrieveStudentsGrades);
+
+        server.post(`/portal/cs340/finalizeTeams/:delivId`, CustomCourseRoutes.finalizeTeams);
     }
+
     public static async getNextUngraded(req: any, res: any, next: any) {
         Log.info(`CS340Routes::getNextUngraded(..) - start`);
 
@@ -682,6 +685,41 @@ export default class CustomCourseRoutes implements IREST {
         return next();
     }
 
+    private static async finalizeTeams(req: any, res: any, next: any) {
+        Log.info(`CS340Routes::finalizeTeams(..) - start`);
+        const user = req.headers.user;
+        const token = req.headers.token;
+
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+
+        if (!isValid.isAdmin) {
+            Log.info(`CS340Routes::finalizeTeams(..) - Unauthorized usage of API: ${user}`);
+            return next(true);
+        } else {
+            Log.info(`CS340Routes::finalizeTeams(..) - Authorized: ${user}`);
+            const ghc = new GitHubController(GitHubActions.getInstance());
+            const cc = new AdminController(ghc);
+
+            const delivId: string = req.params.delivId;
+
+            const dc = new DeliverablesController();
+            const deliv = await dc.getDeliverable(delivId);
+            if (deliv !== null && deliv.shouldProvision === true) {
+                const ret = await cc.planProvision(deliv, true);
+                Log.info(`CS340Routes::finalizeTeams(..) - success; # results ${ret.length}`);
+                res.send(200, {success: true});
+                return next(true);
+            } else {
+                res.send(400, {failure: {
+                    message: `Invalid Deliverable or deliverable is not provisioned via Classy`,
+                    shouldLogout: false
+                }});
+                return next(false);
+            }
+        }
+    }
+
     public static async retrieveStudentsGrades(req: any, res: any, next: any) {
         Log.info(`CS340Routes::retrieveStudentsGrades(..) - start`);
 
@@ -857,4 +895,5 @@ export default class CustomCourseRoutes implements IREST {
             throw new Error("CS340Routes::handleProvisionRepo( " + delivId + ", " + repoId + " ) - null deliverable");
         }
     }
+
 }
