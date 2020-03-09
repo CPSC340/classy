@@ -1,7 +1,7 @@
 import {OnsButtonElement, OnsFabElement, OnsInputElement, OnsListItemElement, OnsSelectElement, OnsSwitchElement} from "onsenui";
 import Log from "../../../../../common/Log";
 import {AssignmentInfo, AssignmentStatus} from "../../../../../common/types/CS340Types";
-import {DeliverableTransport} from "../../../../../common/types/PortalTypes";
+import {DeliverableTransport, Payload} from "../../../../../common/types/PortalTypes";
 import Util from "../../../../../common/Util";
 import {Deliverable} from "../../../../backend/src/Types";
 import {Factory} from "../Factory";
@@ -10,6 +10,7 @@ import {AdminDeliverablesTab} from "../views/AdminDeliverablesTab";
 import {AdminMarkingTab} from "../views/AdminMarkingTab";
 import {AdminTabs, AdminView} from "../views/AdminView";
 import {GradingPageView} from "../views/GradingPage";
+import {Network} from "../util/Network";
 
 declare var ons: any;
 
@@ -74,18 +75,89 @@ export class ManualMarkingAdminView extends AdminView {
         Log.info(`${this.loggingName}::insertTeamFormationUpload(..) - start`);
         const that = this;
 
-        this.buildOnsListItem(`fa-users`,
+        const uploadMenuBox: HTMLDivElement = document.createElement("div");
+        const selectFileButton: HTMLInputElement = document.createElement("input");
+        selectFileButton.setAttribute('id', 'adminSubmitTeamsFile');
+        selectFileButton.setAttribute('type', 'file');
+        const teamsUploadButton: OnsButtonElement = document.createElement('ons-button');
+        teamsUploadButton.setAttribute('class', 'button button--medium');
+        teamsUploadButton.setAttribute('id', 'adminSubmitTeamsFileButton');
+        teamsUploadButton.innerText = 'Upload Teams List';
+        uploadMenuBox.appendChild(selectFileButton);
+        uploadMenuBox.appendChild(teamsUploadButton);
+
+
+        teamsUploadButton.addEventListener('click', () => {
+            Log.info(`${this.loggingName}::teamsUploadButton(..) - upload teams pressed`);
+            evt.stopPropagation(); // prevents list item expansion
+
+            if (selectFileButton.value.length > 0) {
+                Log.trace(`${this.loggingName}::teamsUploadButton(..) - File is non-zero, continuing`);
+                this.uploadTeamsFile(selectFileButton.files).then((result) => {
+                    // done
+                }).catch((err) => {
+                    // err
+                    Log.error(`${this.loggingName}::teamsUploadButton(..) - error: ${JSON.stringify(err)}`);
+                });
+            } else {
+                UI.notification(`You must select a CSV before you click 'Upload'`);
+            }
+        });
+
+        const listItem = this.buildOnsListItem(`fa-users`,
                 `Upload team list`,
-                null,
+                uploadMenuBox,
                 `Upload a CSV that contains teams for a given deliverable.
                 CSV format is: DELIVID|sid1|sid2[..]
                 `
             );
 
+        const deliverableTeamSelectElement = document.getElementById(`adminTeamDeliverableSelect`);
+        const deliverableTeamSelectListItem = deliverableTeamSelectElement.parentElement.parentElement.parentElement;
+        deliverableTeamSelectListItem.parentNode.insertBefore(listItem, deliverableTeamSelectListItem.nextSibling);
+
+
         // const closeAssignment = this.buildOnsListItem(`fa-plus-square`,
         //     `Close Repositories`,
         //     closeAssignmentButton, `This closes the repositories and prevents users from pushing to the repo`
         // );
+    }
+
+    private async uploadTeamsFile(fileList: FileList) {
+        Log.info(`${this.loggingName}::uploadTeamsFile(..) - start`);
+        const url = this.remote + '/portal/cs340/postTeams';
+
+
+        UI.showModal('Uploading Teams List.');
+
+        try {
+            const formData = new FormData();
+            formData.append('teamlist', fileList[0]); // The CSV is fileList[0]
+            const opts = {
+                headers: {
+                    // 'Content-Type': 'application/json', // violates CORS; leave commented out
+                    user:  localStorage.user,
+                    token: localStorage.token
+                }
+            };
+            const response: Response = await Network.httpPostFile(url, opts, formData);
+            if (response.status >= 200 && response.status < 300) {
+                const data: Payload = await response.json();
+                UI.hideModal();
+                Log.info(`${this.loggingName}::uploadTeamsFile(..) - RESPONSE: ${JSON.stringify(data)}`);
+                UI.notification(`Successful upload; New teams: ${data.successCount}, errors: ${data.failedCount}`);
+            } else {
+                const reason = await response.json();
+                UI.hideModal();
+                UI.notification(`There was an issue uploading your class list.
+                Please ensure that the CSV file is in the correct format!
+                Details: ${reason}`);
+            }
+        } catch (err) {
+            UI.hideModal();
+            Log.info(`${this.loggingName}::uploadTeamsFile(..) - ERROR: ${err.message}`);
+            UI.notification(JSON.stringify(err));
+        }
     }
 
     public handleAdminEditDeliverable(opts: any): void {
