@@ -1,16 +1,16 @@
 import {OnsButtonElement, OnsFabElement, OnsInputElement, OnsListItemElement, OnsSelectElement, OnsSwitchElement} from "onsenui";
+import {Deliverable} from "portal-backend/src/Types";
 import Log from "../../../../../common/Log";
 import {AssignmentInfo, AssignmentStatus} from "../../../../../common/types/CS340Types";
 import {DeliverableTransport, Payload} from "../../../../../common/types/PortalTypes";
 import Util from "../../../../../common/Util";
-import {Deliverable} from "../../../../backend/src/Types";
 import {Factory} from "../Factory";
+import {Network} from "../util/Network";
 import {UI} from "../util/UI";
 import {AdminDeliverablesTab} from "../views/AdminDeliverablesTab";
 import {AdminMarkingTab} from "../views/AdminMarkingTab";
 import {AdminTabs, AdminView} from "../views/AdminView";
 import {GradingPageView} from "../views/GradingPage";
-import {Network} from "../util/Network";
 
 declare var ons: any;
 
@@ -66,6 +66,8 @@ export class ManualMarkingAdminView extends AdminView {
             }).catch((err) => {
                 Log.error(`${this.loggingName}::renderPage::AdminConfig::generateGradeExportCallback(..) - Error: ${err}`);
             });
+
+            this.insertTeamFormationUpload();
         }
 
         Log.warn(`${this.loggingName}::renderPage(..) with name: ` + name + ` - complete`);
@@ -75,19 +77,24 @@ export class ManualMarkingAdminView extends AdminView {
         Log.info(`${this.loggingName}::insertTeamFormationUpload(..) - start`);
         const that = this;
 
+        const boxCheck = document.getElementById('adminUploadTeamsBox');
+        if (boxCheck !== null) {
+            return;
+        }
+
         const uploadMenuBox: HTMLDivElement = document.createElement("div");
+        uploadMenuBox.setAttribute('id', "adminUploadTeamsBox");
         const selectFileButton: HTMLInputElement = document.createElement("input");
         selectFileButton.setAttribute('id', 'adminSubmitTeamsFile');
         selectFileButton.setAttribute('type', 'file');
-        const teamsUploadButton: OnsButtonElement = document.createElement('ons-button');
+        const teamsUploadButton: OnsButtonElement = document.createElement('ons-button') as OnsButtonElement;
         teamsUploadButton.setAttribute('class', 'button button--medium');
         teamsUploadButton.setAttribute('id', 'adminSubmitTeamsFileButton');
         teamsUploadButton.innerText = 'Upload Teams List';
         uploadMenuBox.appendChild(selectFileButton);
         uploadMenuBox.appendChild(teamsUploadButton);
 
-
-        teamsUploadButton.addEventListener('click', () => {
+        teamsUploadButton.addEventListener('click', (evt) => {
             Log.info(`${this.loggingName}::teamsUploadButton(..) - upload teams pressed`);
             evt.stopPropagation(); // prevents list item expansion
 
@@ -116,7 +123,6 @@ export class ManualMarkingAdminView extends AdminView {
         const deliverableTeamSelectListItem = deliverableTeamSelectElement.parentElement.parentElement.parentElement;
         deliverableTeamSelectListItem.parentNode.insertBefore(listItem, deliverableTeamSelectListItem.nextSibling);
 
-
         // const closeAssignment = this.buildOnsListItem(`fa-plus-square`,
         //     `Close Repositories`,
         //     closeAssignmentButton, `This closes the repositories and prevents users from pushing to the repo`
@@ -126,7 +132,6 @@ export class ManualMarkingAdminView extends AdminView {
     private async uploadTeamsFile(fileList: FileList) {
         Log.info(`${this.loggingName}::uploadTeamsFile(..) - start`);
         const url = this.remote + '/portal/cs340/postTeams';
-
 
         UI.showModal('Uploading Teams List.');
 
@@ -142,16 +147,16 @@ export class ManualMarkingAdminView extends AdminView {
             };
             const response: Response = await Network.httpPostFile(url, opts, formData);
             if (response.status >= 200 && response.status < 300) {
-                const data: Payload = await response.json();
+                const data: {successCount: number, failCount: number} = await response.json();
                 UI.hideModal();
                 Log.info(`${this.loggingName}::uploadTeamsFile(..) - RESPONSE: ${JSON.stringify(data)}`);
-                UI.notification(`Successful upload; New teams: ${data.successCount}, errors: ${data.failedCount}`);
+                UI.notification(`Successful upload; New teams: ${data.successCount}, errors: ${data.failCount}`);
             } else {
                 const reason = await response.json();
                 UI.hideModal();
                 UI.notification(`There was an issue uploading your class list.
                 Please ensure that the CSV file is in the correct format!
-                Details: ${reason}`);
+                Details: ${JSON.stringify(reason)}`);
             }
         } catch (err) {
             UI.hideModal();

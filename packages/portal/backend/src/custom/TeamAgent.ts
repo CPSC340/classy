@@ -40,7 +40,7 @@ export class TeamAgent {
             // verify that the row has the "delivId" data column
             if (typeof row.DELIVID !== 'undefined') {
                 const delivId = row.DELIVID;
-                const rowData: string[] =  row.entries();
+                const rowData: string[] =  Object.values(row);
                 rowData.shift();
                 const personIds: string[] = rowData;
 
@@ -53,7 +53,7 @@ export class TeamAgent {
                 // const persons: Array<Person | null> = await Promise.all(personIds.map((personId) => this.pc.getPerson(personId)));
 
                 // check if any of the persons isn't actually in the database
-                if (!persons.includes(null)) {
+                if (persons.includes(null)) {
                     Log.warn(`TeamAgent::processTeamList(..) - Found issue with row: ${JSON.stringify(row)}, ` +
                         `person ID did not resolve to a valid database entry`);
                     failCount += 1;
@@ -102,10 +102,10 @@ export class TeamAgent {
                 failCount += 1;
             }
 
-            await this.db.writeAudit(`Teamlist Upload` as AuditLabel, initiatorPersonId, {}, {},
-                {successCount: successCount, failCount: failCount});
-            return {successCount: successCount, failCount: failCount};
+            // await this.db.writeAudit(`Teamlist Upload` as AuditLabel, initiatorPersonId, {}, {},
+            //     {successCount: successCount, failCount: failCount});
         }
+        return {successCount: successCount, failCount: failCount};
     }
 
     private duplicateDataCheck(data: any[], columnNames: string[]) {

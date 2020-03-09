@@ -708,17 +708,17 @@ export default class CustomCourseRoutes implements IREST {
 
                 ta.processTeamList(user, path, null).then((teamChanges) => {
                     // Process the data from teamchanges
-                    res.send(200, teamChanges);
                     Log.info(`CS340Routes::postTeamCSV(..) - done: Teams upload successful. ` +
                         `Success: ${teamChanges.successCount}; failures: ${teamChanges.failCount}`);
+                    return res.send(200, teamChanges);
                 }).catch((err: Error) => {
-                    Log.error(`CS340Routes::postTeamCSV(..) - Error: Unable to upload Teams CSV; err ${err}`);
-                    res.send(400, {failure: err});
+                    Log.error(`CS340Routes::postTeamCSV(..) - Error: Unable to upload Teams CSV 1; err ${err}`);
+                    return res.send(400, {failure: err});
                 });
             } catch (err) {
                 //
-                Log.error(`CS340Routes::postTeamCSV(..) - Error: Unable to upload Teams CSV; err ${err}`);
-                res.send(400, {failure: err});
+                Log.error(`CS340Routes::postTeamCSV(..) - Error: Unable to upload Teams CSV 2; err ${err}`);
+                return res.send(400, {failure: err});
             }
         }
 
