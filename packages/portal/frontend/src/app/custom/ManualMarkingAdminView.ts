@@ -70,6 +70,24 @@ export class ManualMarkingAdminView extends AdminView {
         Log.warn(`${this.loggingName}::renderPage(..) with name: ` + name + ` - complete`);
     }
 
+    public insertTeamFormationUpload(): void {
+        Log.info(`${this.loggingName}::insertTeamFormationUpload(..) - start`);
+        const that = this;
+
+        this.buildOnsListItem(`fa-users`,
+                `Upload team list`,
+                null,
+                `Upload a CSV that contains teams for a given deliverable.
+                CSV format is: DELIVID|sid1|sid2[..]
+                `
+            );
+
+        // const closeAssignment = this.buildOnsListItem(`fa-plus-square`,
+        //     `Close Repositories`,
+        //     closeAssignmentButton, `This closes the repositories and prevents users from pushing to the repo`
+        // );
+    }
+
     public handleAdminEditDeliverable(opts: any): void {
         super.handleAdminEditDeliverable(opts);
         const that = this;

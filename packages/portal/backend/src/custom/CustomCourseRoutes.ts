@@ -10,7 +10,6 @@ import {
 import Util from "../../../../common/Util";
 import {AdminController} from "../controllers/AdminController";
 import {AuthController} from "../controllers/AuthController";
-import {CourseController} from "../controllers/CourseController";
 import {DatabaseController} from "../controllers/DatabaseController";
 import {DeliverablesController} from "../controllers/DeliverablesController";
 import {GitHubActions} from "../controllers/GitHubActions";
@@ -18,11 +17,13 @@ import {GitHubController} from "../controllers/GitHubController";
 import {PersonController} from "../controllers/PersonController";
 import {RepositoryController} from "../controllers/RepositoryController";
 import {TeamController} from "../controllers/TeamController";
+import {CSVParser} from "../server/common/CSVParser";
 import IREST from "../server/IREST";
 import {AuditLabel, Deliverable, Grade, Person, Repository, Team} from "../Types";
 import {AssignmentController} from "./AssignmentController";
 import {RubricController} from "./RubricController";
 import {ScheduleController} from "./ScheduleController";
+import {TeamAgent} from "./TeamAgent";
 
 export default class CustomCourseRoutes implements IREST {
 
@@ -54,6 +55,8 @@ export default class CustomCourseRoutes implements IREST {
         server.get("/portal/cs340/isFinalGradeReleased", CustomCourseRoutes.isFinalGradeReleased);
         server.post("/portal/cs340/toggleFinalGradeRelease", CustomCourseRoutes.toggleFinalGradeRelease);
         server.get("/portal/cs340/retrieveStudentsGrades/:delivId", CustomCourseRoutes.retrieveStudentsGrades);
+
+        server.post("/portal/cs340/postTeams", CustomCourseRoutes.postTeamCSV);
     }
 
     public static async getNextUngraded(req: any, res: any, next: any) {
@@ -682,6 +685,44 @@ export default class CustomCourseRoutes implements IREST {
         }
 
         return next();
+    }
+
+    public static async postTeamCSV(req: any, res: any, next: any) {
+        Log.info(`CS340Routes::postTeamCSV(..) - start`);
+
+        const user = req.headers.user;
+        const token = req.headers.token;
+
+        const ac = new AuthController();
+        const isValid = await ac.isPrivileged(user, token);
+
+        if (!isValid.isAdmin) {
+            Log.info(`CS340Routes::postTeamCSV(..) - Unauthorized usage of API: ${user}`);
+        } else {
+            Log.info(`CS340Routes::postTeamCSV(..) - Authorized`);
+
+            try {
+                const path = req.files.teamlist.path;
+                const ta = new TeamAgent();
+                // ta.processTeamList(user, )
+
+                ta.processTeamList(user, path, null).then((teamChanges) => {
+                    // Process the data from teamchanges
+                    res.send(200, teamChanges);
+                    Log.info(`CS340Routes::postTeamCSV(..) - done: Teams upload successful. ` +
+                        `Success: ${teamChanges.successCount}; failures: ${teamChanges.failCount}`);
+                }).catch((err: Error) => {
+                    Log.error(`CS340Routes::postTeamCSV(..) - Error: Unable to upload Teams CSV; err ${err}`);
+                    res.send(400, {failure: err});
+                });
+            } catch (err) {
+                //
+                Log.error(`CS340Routes::postTeamCSV(..) - Error: Unable to upload Teams CSV; err ${err}`);
+                res.send(400, {failure: err});
+            }
+        }
+
+        return next(true);
     }
 
     public static async retrieveStudentsGrades(req: any, res: any, next: any) {
