@@ -127,7 +127,7 @@ export class Factory {
 
                 if (this.name.toLowerCase() === 'mds' || this.name.toLowerCase() === 'cs340') {
                     // disable the rest of the tabs
-                    tabs.teams = false; // no teams
+                    tabs.teams = true; // no teams
                     tabs.results = false; // no results
                     tabs.dashboard = false; // no dashboard
                 }
