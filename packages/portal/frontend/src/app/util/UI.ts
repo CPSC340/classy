@@ -2,6 +2,7 @@
  * Created by rtholmes on 2017-10-04.
  */
 import Log from "../../../../../common/Log";
+import {StudentTransport} from "../../../../../common/types/PortalTypes";
 
 // const OPEN_DELIV_KEY = 'open';
 // const CLOSE_DELIV_KEY = 'close';
@@ -31,21 +32,6 @@ export class UI {
         } else {
             Log.error('UI::pushPage(..) - WARN: nav is null');
             return nav.pushPage(pageId, options);
-        }
-    }
-
-    public static replacePage(pageId: string, options?: any): any {
-        if (typeof options === 'undefined') {
-            options = {};
-        }
-        Log.trace('UI::pushPage( ' + pageId + ', ' + JSON.stringify(options) + ' )');
-
-        const nav = document.querySelector('#myNavigator') as any; // as ons.OnsNavigatorElement;
-        if (nav !== null) {
-            return nav.replacePage(pageId, options);
-        } else {
-            Log.error('UI::pushPage(..) - WARN: nav is null');
-            return nav.replacePage(pageId, options);
         }
     }
 
@@ -116,6 +102,10 @@ export class UI {
         ons.notification.toast(opts);
     }
 
+    public static createOption(text: string, value: string): HTMLElement {
+        return ons.createElement('<option value=' + value + '>' + text + '</option>');
+    }
+
     public static createListItem(text: string, subtext?: string, tappable?: boolean): HTMLElement {
 
         let prefix = '<ons-list-item style="display: table;">';
@@ -156,6 +146,7 @@ export class UI {
             Log.trace("UI::showModal( " + text + " ) - start; modal: " + m);
             if (m !== null) {
                 if (text != null) {
+                    const content = document.querySelectorAll('#modalText') as any;
                     const textFields = document.querySelectorAll('#modalText') as any;
                     for (const t of textFields) {
                         // document.getElementById('modalText').innerHTML = text;
@@ -302,6 +293,52 @@ export class UI {
         return ons.notification.alert(message);
     }
 
+    public static templateConfirm(template: string, options: {header?: string, listContent?: Array<{text: string, subtext?: string}>}) {
+        return ons.createElement(template, {append: true}).then(function(classlistDialog: any) {
+            const onsList = classlistDialog.querySelector('ons-list') as HTMLElement;
+            (classlistDialog.querySelector('ons-list-header') as HTMLElement).innerHTML = options.header;
+            classlistDialog.querySelector('ons-button').onclick = function() { classlistDialog.hide(); };
+            if (options && options.listContent) {
+                options.listContent.forEach(function(listItem) {
+                    onsList.appendChild(UI.createListItem(listItem.text, listItem.subtext || ''));
+                });
+            }
+            classlistDialog.show();
+        })
+        .catch(function(err: Error) {
+            Log.error('UI::prompt(..) - ERROR: ' + err);
+        });
+    }
+
+    public static async templateDisplayText(template: string, text: string = ''): Promise<HTMLDivElement> {
+        return ons.createElement(template, {append: true}).then(function(textDialog: any) {
+            const textContentDiv = textDialog.querySelector('#adminDockerBuildDialog-logs-text') as HTMLDivElement;
+            textContentDiv.innerText = text;
+            textDialog.show();
+
+            const saveButton = textDialog.querySelector('#adminDockerBuildDialog-footer-save');
+            const closeButton = textDialog.querySelector('#adminDockerBuildDialog-footer-close');
+            closeButton.onclick = function() { textDialog.hide(); };
+            saveButton.onclick = function() {
+                const dateTimeLocal = new Date((new Date().getTime() - new Date().getTimezoneOffset() * 60000)).toISOString();
+                saveButton['download'] = 'Build Log ' + dateTimeLocal + '.txt';
+                saveButton.href = 'data:application/octet-stream,' + encodeURIComponent(textContentDiv.innerText);
+             };
+            saveButton['download'] = 'Classy Build Log';
+
+            // Updates data when right-clicked to choose custom save filename
+            saveButton.oncontextmenu = function() {
+                saveButton.href = 'data:application/octet-stream,' + encodeURIComponent(textContentDiv.innerText);
+            };
+
+            return textContentDiv;
+        });
+    }
+
+    public static confirm(message: string, options: {template: string, header?: string}) {
+        return ons.notification.confirm(message);
+    }
+
     // SDMM: move
     public static showD1TeamDialog() {
         const dialog: any = document.getElementById('d1teamDialog');
@@ -345,6 +382,51 @@ export class UI {
         }
     }
 
+    public static injectCustomPage(path: string) {
+        Log.info('UI::injectCustomPage( ' + path + ' ) - start');
+
+        // Create a new import node
+        const importNode = document.createElement('link');
+        importNode.href = path;
+        importNode.rel = 'import';
+        // Set the callback used when import is loaded. The line below is
+        // adapted from importHref function in Polymer
+        importNode.onload = function(importedNode: any, event: any) {
+            // Put the document DOM tree in the import attribute as usual
+            Log.info('UI::injectCustomPage( ' + path + ' ) - loading complete');
+            (importNode as any).import = event.target.import;
+        }.bind(this, importNode);
+
+        // Triggers import loading
+        document.head.appendChild(importNode);
+    }
+
+    /**
+     * Clones a custom element from a template injected with injectCustomPage above
+     * and prepares it to be added to the DOM wherever it is required.
+     *
+     * @param {string} id
+     * @returns {Node | null}
+     */
+    public static cloneCustomElement(id: string): Node | null {
+        Log.info("UI::cloneCustomElement( " + id + " ) - start");
+
+        // iterates through all linked imports and returns the first element with the right id
+        const customs = (document.querySelectorAll('link[rel="import"]'));
+        for (const custom of Array.from(customs) as HTMLLinkElement[]) {
+            if (custom !== null) {
+                const templates = (custom as any).import.querySelectorAll('template');
+                for (const template of Array.from(templates) as HTMLTemplateElement[]) {
+                    if (template !== null && template.id === id) {
+                        const clone = document.importNode(template.content, true);
+                        return clone;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     public static clearChildren(id: string) {
         const el = document.getElementById(id);
         if (el === null) {
@@ -354,4 +436,12 @@ export class UI {
         }
     }
 
+    public static clearTextField(fieldName: string) {
+        const field = document.querySelector('#' + fieldName) as HTMLTextAreaElement;
+        if (field !== null) {
+            field.value = '';
+        } else {
+            Log.error('UI::clearTextField( ' + fieldName + ' ) - element does not exist');
+        }
+    }
 }

@@ -1,6 +1,8 @@
 import Log from "../../../../common/Log";
-import {Deliverable, Grade, Person} from "../Types";
+import {Deliverable, Grade, Person, Repository, Team} from "../Types";
 
+import {CommitTarget} from "../../../../common/types/ContainerTypes";
+import {TransportKind} from "../../../../common/types/PortalTypes";
 import {DatabaseController} from "./DatabaseController";
 import {IGitHubController} from "./GitHubController";
 import {GradesController} from "./GradesController";
@@ -15,7 +17,7 @@ import {TeamController} from "./TeamController";
  * implement this interface but should instead extend CourseController.
  *
  * Courses can also of course add their own methods to their custom subclass
- * (e.g., see SDMMController), or can have minimial implementations (e.g.,
+ * (e.g., see CustomCourseController), or can have minimal implementations (e.g.,
  * see CS310Controller).
  */
 export interface ICourseController {
@@ -55,7 +57,30 @@ export interface ICourseController {
      * @param {Person[]} people
      * @returns {{teamName: string | null; repoName: string | null}}
      */
-    computeNames(deliv: Deliverable, people: Person[]): Promise<{teamName: string | null, repoName: string | null}>;
+    computeNames(deliv: Deliverable, people: Person[], adminOverride?: boolean):
+        Promise<{teamName: string | null; repoName: string | null}>;
+
+    /**
+     * For adding any finishing touches to a newly made repo
+     * e.g.: add branch protection to the master branch in 310
+     * @param repo
+     * @param teams
+     */
+    finalizeProvisionedRepo(repo: Repository, teams: Team[]): Promise<boolean>;
+
+    /**
+     * For forwarding custom fields from a record to its respective transport
+     * @param record
+     * @param kind
+     */
+    forwardCustomFields(record: any, kind: TransportKind): any;
+
+    /**
+     * For forcing certain push events to the express queue
+     * e.g.: Commits on master getting automatically graded
+     * @param info
+     */
+    shouldPrioritizePushEvent(info: CommitTarget): Promise<boolean>;
 }
 
 /**
@@ -100,16 +125,20 @@ export class CourseController implements ICourseController {
      * @returns {boolean}
      */
     public handleNewAutoTestGrade(deliv: Deliverable, newGrade: Grade, existingGrade: Grade): Promise<boolean> {
-        Log.info("CourseController::handleNewAutoTestGrade( " + deliv.id + ", " +
-            newGrade.personId + ", " + newGrade.score + ", ... ) - start");
+        const LOGPRE = "CourseController::handleNewAutoTestGrade( " + deliv.id + ", " +
+            newGrade.personId + ", " + newGrade.score + ", ... ) - URL: " + newGrade.URL + " - ";
+
+        Log.info(LOGPRE + "start");
 
         if (newGrade.timestamp < deliv.openTimestamp) {
             // too early
+            Log.info(LOGPRE + "not recorded; deliverable not yet open");
             return Promise.resolve(false);
         }
 
         if (newGrade.timestamp > deliv.closeTimestamp) {
             // too late
+            Log.info(LOGPRE + "not recorded; deliverable closed");
             return Promise.resolve(false);
         }
 
@@ -117,17 +146,15 @@ export class CourseController implements ICourseController {
         const gradeIsLarger = (existingGrade === null || newGrade.score >= existingGrade.score);
 
         if (gradeIsLarger === true) {
-            Log.trace("CourseController::handleNewAutoTestGrade( " + deliv.id + ", " +
-                newGrade.personId + ", " + newGrade.score + ", ... ) - returning true");
+            Log.info(LOGPRE + "recorded; deliv open and grade increased");
             return Promise.resolve(true);
         } else {
-            Log.trace("CourseController::handleNewAutoTestGrade( " + deliv.id + ", " +
-                newGrade.personId + ", " + newGrade.score + ", ... ) - returning false");
+            Log.info(LOGPRE + "not recorded; deliverable open but grade not increased");
             return Promise.resolve(false);
         }
     }
 
-    public async computeNames(deliv: Deliverable, people: Person[]): Promise<{teamName: string | null, repoName: string | null}> {
+    public async computeNames(deliv: Deliverable, people: Person[]): Promise<{teamName: string | null; repoName: string | null}> {
         if (deliv === null) {
             throw new Error("CourseController::computeNames( ... ) - null Deliverable");
         }
@@ -145,7 +172,9 @@ export class CourseController implements ICourseController {
 
         let postfix = '';
         for (const person of people) {
-            postfix = postfix + '_' + person.githubId;
+            // NOTE: use CSID here to be more resilient if CWLs change
+            // TODO: this would be even better if it was person.id
+            postfix = postfix + '_' + person.csId;
         }
 
         let tName = '';
@@ -167,12 +196,28 @@ export class CourseController implements ICourseController {
         const repo = await db.getRepository(rName);
 
         if (team === null && repo === null) {
-            Log.info('CourseController::computeNames( ... ) - done; t: ' + tName + ', r: ' + rName);
+            Log.info('CourseController::computeNames( ... ) - done; t: ' + tName); // + ', r: ' + rName);
             return {teamName: tName, repoName: rName};
+            // return tName;
         } else {
             // TODO: should really verify that the existing teams contain the right people already
             return {teamName: tName, repoName: rName};
+            // return tName;
         }
+    }
+
+    public async finalizeProvisionedRepo(repo: Repository, teams: Team[]): Promise<boolean> {
+        Log.warn("CourseController::finalizeProvisionedRepo( " + repo.id + " ) - default impl; returning true");
+        return true;
+    }
+
+    public forwardCustomFields(record: any, kind: TransportKind): any {
+        return {};
+    }
+
+    public async shouldPrioritizePushEvent(info: CommitTarget): Promise<boolean> {
+        Log.warn(`CourseController::shouldPrioritizePushEvent(${info.commitSHA}) - Default impl; returning false`);
+        return false;
     }
 
     // NOTE: the default implementation is currently broken; do not use it.

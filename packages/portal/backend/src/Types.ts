@@ -1,6 +1,6 @@
 import {AutoTestResult} from "../../../common/types/AutoTestTypes";
 import {AutoTestConfig} from "../../../common/types/ContainerTypes";
-import {AssignmentGrade, AssignmentInfo} from "../../../common/types/CS340Types";
+import {AssignmentGrade, AssignmentInfo, AssignmentRepositoryInfo} from "../../../common/types/CS340Types";
 
 /**
  * These types are the storage-specific types used by the backend.
@@ -50,8 +50,8 @@ export interface Person {
     readonly studentNumber: number | null;
     githubId: string; // warning: this can change (e.g., if student updates their CWL)
 
-    readonly fName: string;
-    readonly lName: string;
+    fName: string;
+    lName: string;
     kind: PersonKind | null; // student, staff, admin (staff / admin taken from GitHub if kind is null)
     URL: string | null; // usually the person's GitHub profile URL; null when not yet validated
 
@@ -96,7 +96,10 @@ export interface Deliverable {
     custom: {
         rubric?: any, // CS340REST
         assignment?: AssignmentInfo // AssignmentController
-        scheduled?: boolean, // TODO [Jonathan] Create type for this
+        // courseWeight?: any, // AssignmentController // TODO: make into assignment.courseWeight
+        // seedRepoURL?: any, // RubricController // TODO: make into rubric.seedRepoURL
+        // seedRepoPath?: any, // RubricController // TODO: make into rubric.seedRepoPath
+        // mainFilePath?: any // AssignmentController // TODO: make into assignment.mainFilePath
     };
 
     lateAutoTest: boolean; // whether the deliv can be executed after the deadline
@@ -125,6 +128,8 @@ export interface Team {
     URL: string | null; // null when not yet created
     githubId: number | null; // null when not yet created
     personIds: string[]; // Person.id[] - foreign key
+    // repoName: string | null;
+    // repoUrl: string | null;
 
     // githubStatus: string; // NONE | CREATED | LINKED
     custom: {
@@ -158,6 +163,12 @@ export interface Repository {
     custom: { // rather than having custom be .any, this allows courses to make sure they don't clash on their .custom parameters
         githubCreated?: boolean,
         githubReleased?: boolean,
+
+        // status?: any, // AssignmentController // TODO: make into assignment.status
+        // assignmentId?: any, // AssignmentController // TODO: make into assignment.id
+        // assignedTeams?: any, // AssignmentController // TODO: make into assignment.assignedTeams
+
+        assignmentInfo?: AssignmentRepositoryInfo,
 
         d0enabled?: boolean, // SDMM // TODO: make sdmm.d0enabled
         d1enabled?: boolean, // SDMM // TODO: make sdmm.d1enabled
@@ -216,7 +227,8 @@ export interface Grade {
     urlName: string | null; // name associated with URL (e.g., project name)
     URL: string | null; // link to commit, if appropriate or repoUrl if not
 
-    // custom: any; // {}; not used by the default implementation, but useful for extension (e.g., custom grade values)
+    custom: any; // {}; not used by the default implementation, but useful for extension (e.g., custom grade values)
+    /*
     custom: { // rather than having custom be .any, this allows courses to make sure they don't clash on their .custom parameters
         sdmmStatus?: boolean
 
@@ -226,6 +238,7 @@ export interface Grade {
         // released?: any, // AssignmentController // TODO: make into assignment.released
         assignmentGrade?: AssignmentGrade
     };
+     */
 }
 
 export interface Result extends AutoTestResult { // TODO: define this without this extends. This import is no good!

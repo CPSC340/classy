@@ -2,12 +2,12 @@ import {expect} from "chai";
 import "mocha";
 import Config, {ConfigKey} from "../../../../common/Config";
 import Log from "../../../../common/Log";
+import {Test} from "../../../../common/TestHarness";
 
 import {DatabaseController} from "../../src/controllers/DatabaseController";
 import {PersonKind} from "../../src/Types";
 
 import '../GlobalSpec';
-import {Test} from "../TestHarness";
 
 /**
  * This suite seems like a lot of boilerplate, but is crucial to make sure the
@@ -96,7 +96,7 @@ describe("DatabaseController", () => {
     });
 
     it("Should not be able to get an invalid result URL.", async () => {
-        const result = await dc.getResultFromURL('invalidURL' + Date.now());
+        const result = await dc.getResultFromURL('invalidURL' + Date.now(), Test.DELIVID0);
         expect(result).to.be.null;
     });
 
@@ -137,7 +137,7 @@ describe("DatabaseController", () => {
     });
 
     it("Should be able to get a list of results when there are none.", async () => {
-        const results = await dc.getResults();
+        const results = await dc.getAllResults();
         expectEmptyArray(results);
     });
 

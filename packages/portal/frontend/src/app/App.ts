@@ -68,58 +68,11 @@ export class App {
 
             document.addEventListener('init', function(event) {
                 const page = event.target as OnsPageElement;
-
-                // update login button result
-                that.toggleLoginButton();
-
-                const pageName = page.id;
-                let name: string = null;
-
-                name = Factory.getInstance().getName();
-                Log.trace('App::init()::init - name : ' + name + '; page: ' + pageName + '; opts: ' + JSON.stringify(event));
-
-                // Log.trace('App::init()::init - page: ' + pageName);
-                if (pageName === 'index') {
-                    Log.trace('App::init()::init - index detected; pushing real target');
-                    UI.pushPage(Factory.getInstance().getHTMLPrefix() + '/landing.html').then(function() {
-                        // success
-                    }).catch(function(err) {
-                        Log.error("UI::pushPage(..) - ERROR: " + err.message);
-                    });
-                    return;
-                }
-
-                if (that.view === null) {
-                    let v: IView = null;
-                    Log.info("App::init() - init; null view; pageName: " + pageName);
-                    if (pageName === 'AdminRoot') {
-                        // initializing tabs page for the first time
-                        Log.info("App::init() - AdminRoot init; attaching view");
-                        v = Factory.getInstance().getAdminView(that.backendURL);
-                        Log.trace("App::init() - AdminRoot init; view attached");
-                    } else if (pageName === 'StudentRoot') {
-                        // initializing tabs page for the first time
-                        Log.info("App::init() - StudentRoot init; attaching view");
-                        v = Factory.getInstance().getView(that.backendURL);
-                        Log.trace("App::init() - StudentRoot init; view attached");
-                    } else {
-                        Log.warn("App::init() - UNKNOWN page name: " + pageName);
-                    }
-
-                    (window as any).myApp.view = v; // convenience reference so UI elements can access view code
-                    that.view = v;
-                }
-
-                if (pageName === 'loginPage') {
-                    Log.trace("App::init() - loginPage init; attaching login button");
-
-                    (document.querySelector('#loginButton') as OnsButtonElement).onclick = function() {
-                        // localStorage.setItem('org', org);
-                        const url = that.backendURL + '/portal/auth/?name=' + name;
-                        Log.trace('App::init()::init - login pressed for: ' + name + '; url: ' + url);
-                        window.location.replace(url);
-                    };
-                }
+                that.performInit(page.id).then(function() {
+                    //
+                }).catch(function(err) {
+                    //
+                });
             });
 
             /**
@@ -153,11 +106,69 @@ export class App {
             UI.pushPage(Factory.getInstance().getHTMLPrefix() + '/landing.html').then(function() {
                 // success
             }).catch(function(err) {
-                Log.error("UI::pushPage(..) - ERROR: " + err.message);
+                Log.error("UI::pushPage(..) - ERROR: " + err);
             });
 
             fulfill({}); // resolve the promise so it's not just hanging there
         });
+
+    }
+
+    public async performInit(pageName: string): Promise<void> {
+        Log.info("App::performInit() - start");
+        const that = this;
+
+        // update login button result
+        this.toggleLoginButton();
+
+        let name: string = null;
+
+        name = Factory.getInstance().getName();
+        Log.trace('App::performInit() - name : ' + name + '; page: ' + pageName + '; opts: ' + JSON.stringify(event));
+
+        if (pageName === 'index') {
+            Log.trace('App::performInit() - index detected; pushing real target');
+            // TODO: make it so tthis 'pushPage is already running' error doesn't happen.
+            UI.pushPage(Factory.getInstance().getHTMLPrefix() + '/landing.html').then(function() {
+                // success
+            }).catch(function(err) {
+                Log.error("App::performInit(..) - ERROR: " + err.message);
+            });
+
+            return;
+        }
+
+        if (this.view === null) {
+            let v: IView = null;
+            Log.info("App::performInit() - init; null view; pageName: " + pageName);
+            if (pageName === 'AdminRoot') {
+                // initializing tabs page for the first time
+                Log.info("App::init() - AdminRoot init; attaching view");
+                v = await Factory.getInstance().getAdminView(this.backendURL);
+                Log.trace("App::performInit() - AdminRoot init; view attached");
+            } else if (pageName === 'StudentRoot') {
+                // initializing tabs page for the first time
+                Log.info("App::performInit() - StudentRoot init; attaching view");
+                v = await Factory.getInstance().getView(this.backendURL);
+                Log.trace("App::performInit() - StudentRoot init; view attached");
+            } else {
+                Log.warn("App::performInit() - UNKNOWN page name: " + pageName);
+            }
+
+            (window as any).myApp.view = v; // convenience reference so UI elements can access view code
+            this.view = v;
+        }
+
+        if (pageName === 'loginPage') {
+            Log.trace("App::performInit() - loginPage init; attaching login button");
+
+            (document.querySelector('#loginButton') as OnsButtonElement).onclick = function() {
+                // localStorage.setItem('org', org);
+                const url = that.backendURL + '/portal/auth?name=' + name;
+                Log.trace('App::performInit() - login pressed for: ' + name + '; url: ' + url);
+                window.location.replace(url);
+            };
+        }
     }
 
     public getAdminController(org: string) {
@@ -405,11 +416,11 @@ export class App {
                 return json.success;
             } else {
                 Log.error('App::retrieveConfig() - failed: ' + JSON.stringify(json) + ')');
-                return {org: 'ERROR', name: 'ERROR', githubAPI: null};
+                return {org: 'ERROR', name: 'ERROR', githubAPI: null, studentsFormTeamDelivIds: null};
             }
         } else {
             Log.error('App::retrieveConfig() - ERROR');
-            return {org: 'ERROR', name: 'ERROR', githubAPI: null};
+            return {org: 'ERROR', name: 'ERROR', githubAPI: null, studentsFormTeamDelivIds: null};
         }
     }
 
@@ -428,7 +439,7 @@ export class App {
                 Log.trace("App::handleMainPageClick(..) - admin");
                 // if we're admin, keep the logging on
                 Log.Level = LogLevel.TRACE;
-                UI.pushPage('admin.html', params).then(function() { // NOTE: _without_ HTMLPrefix()
+                UI.pushPage(Factory.getInstance().getHTMLPrefix() + '/admin.html', params).then(function() { // NOTE: _without_ HTMLPrefix()
                     // not using .getHTMLPrefix() above because all instances share a single admin page
                     // success
                 }).catch(function(err) {
